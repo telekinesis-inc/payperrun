@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 135.46665 135.46667"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09, custom)"
+   sodipodi:docname="logo"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.4185983"
+     inkscape:cx="274.21435"
+     inkscape:cy="286.55047"
+     inkscape:window-width="1920"
+     inkscape:window-height="1080"
+     inkscape:window-x="0"
+     inkscape:window-y="-37"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:7.9375;paint-order:markers stroke fill"
+       id="rect1644"
+       width="135.46666"
+       height="135.46666"
+       x="0"
+       y="0"
+       rx="0"
+       ry="55.751266" />
+    <rect
+       style="fill:#00f995;fill-opacity:1;stroke:none;stroke-width:6.81522;paint-order:markers stroke fill"
+       id="rect1539"
+       width="129.36395"
+       height="106.32015"
+       x="2.5038588"
+       y="15.911831"
+       rx="46.148319"
+       ry="48.0154" />
+    <circle
+       style="display:none;fill:#00ffa4;fill-opacity:1;stroke:none;stroke-width:7.9375;paint-order:markers stroke fill"
+       id="path286"
+       cx="67.73333"
+       cy="67.73333"
+       r="67.73333" />
+    <text
+       xml:space="preserve"
+       style="font-weight:bold;font-size:212.092px;font-family:monospace;-inkscape-font-specification:'monospace, Bold';fill:#00ffa4;fill-opacity:1;stroke:none;stroke-width:7.95344;paint-order:markers stroke fill"
+       x="12.564146"
+       y="96.656425"
+       id="text1209"
+       transform="scale(1.0020087,0.99799536)"><tspan
+         sodipodi:role="line"
+         id="tspan1207"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:90.4925px;font-family:monospace;-inkscape-font-specification:'monospace, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#fafffd;fill-opacity:1;stroke-width:7.95344"
+         x="12.564146"
+         y="96.656425">/&gt;</tspan></text>
+  </g>
+</svg>
