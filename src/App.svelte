@@ -7,8 +7,11 @@
   import NavBar from './lib/NavBar.svelte';
   import Sandboxed from './lib/Sandboxed.svelte';
   import PathBar from './lib/PathBar.svelte';
+  import Dropdown from './lib/Dropdown.svelte';
 
-  let path, title, srcDoc, sessionKey, user, node, entrypoint, userId, state;
+  let path, title, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable;
+  let showUserMenu = false;
+  let pendingRequests = [];
 
   const STATES = Object.fromEntries(
     ['inBetween', 'unauthenticated', 'awaitingAuthentication', 'authenticated', 'error'].map(x => [x, x])
@@ -31,7 +34,14 @@
       if (user) {
         node = await user.get('/'+path);
         globalThis.node = node;
-        srcDoc = await node.display;
+        try {
+          const searchParams = new URLSearchParams(window.location.search);
+          const displayParamsStr = searchParams.get('displayParams')
+          shareable = await node.shareable;
+          srcDoc = await node.display(searchParams.get('display'), displayParamsStr && JSON.parse(displayParamsStr));
+        } catch (e) {
+          srcDoc = "<h1>Default display will go here</h1>"
+        }
         window.scrollTo(0, 0);
       } else {
       }
@@ -40,16 +50,24 @@
     router.start();
     if (sessionKey) {
       try {
-        user = await TK.authenticate(entrypoint, null, null)
+        [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
         userId = await user.path.strip('/');
         router.replace(window.location.pathname.slice(1) ? window.location.pathname + window.location.search : ('/'+userId))
+        
+        await user.battery.register_callback((r) => {pendingRequests.push([r.request_id, r]); showUserMenu = true; console.log(r)})
+
+        pendingRequests = Object.entries(await user.battery.requests_dict || {});
+        console.log(pendingRequests)
+        if (pendingRequests.length) {
+          showUserMenu = true;
+        }
       } catch (e) {
         console.log(e);
       }
     }
     if (!user) {
       user = entrypoint;
-      router.replace(window.location.pathname.slice(1) ? window.location.pathname + window.location.search : '/_/welcome')
+      router.replace(window.location.pathname.slice(1) ? window.location.pathname + window.location.search : '/>/welcome')
     }
     globalThis.user = user;
     // try {
@@ -62,6 +80,10 @@
 
   })  
   // const cache = new LRU(x => x+'.'+ Date.now()/1000);
+  const respondRequest = async (requestId, response, i) => {
+    await user.battery.respond_request(requestId, response); 
+    pendingRequests = [...pendingRequests.slice(0, i), ...pendingRequests.slice(i+1)];
+  }
 </script>
 
 <svelte:head><title>PayPerRun.com | {title || "Code. Publish. Earn"}</title></svelte:head>
@@ -75,7 +97,7 @@
         <img src='/favicon.png' class='' alt='≈' style='height: 48px;'/>
       </a> -->
       <!-- {#if path} -->
-        <a class="" href={userId? "/_/market" : "/_/welcome"} style="font-weight: 800; font-size: 24px; color: var(--primary-color); font-family: monospace">
+        <a class="logo" href={userId? "/>/market" : "/>/welcome"} style="font-weight: 800; font-size: 24px; color: var(--primary-color); font-family: monospace">
           <span style="background-color: var(--primary); color: var(--background); border-radius: 25px; padding: 5px 10px 5px 5px; margin: 5px; font-weight:900">
             {"/>"}
           </span>
@@ -90,19 +112,42 @@
     <PathBar path={path}/>
   {/if}
   <div style='flex-grow: 1;'/>
-  {#if !userId}
-    <a href='/_/sign_in'>Sign in</a>
+  {#if userId}
+    <Dropdown bind:showContent={showUserMenu} width={500} left={-460}>
+      <img src={avatarSrc} alt="{userId} avatar image" class='avatar' slot="button" style={showUserMenu ? "opacity: 100%" : ""}/>
+      <div slot='content' style='box-shadow: 0px -5px 15px #aaa;'>
+        {#each pendingRequests as [requestId, requestInfo], i}
+          <div style='display: flex'>
+            <p style="flex-grow:100">"{requestInfo.destination_path}" requests {requestInfo.energy}J + {requestInfo.power}W</p>
+            <button on:click={() => respondRequest(requestId, true, i)} class='requestButton'>Approve</button>
+            <button on:click={() => respondRequest(requestId, false, i)} class='requestButton'>Decline</button>
+          </div>
+        {/each}
+
+      </div>
+    </Dropdown>
+  {:else}
+    <button on:click={() => router.redirect('/>/sign_in')}>Join / Sign-in</button>
   {/if}
 </NavBar>
 
 <main>  
   <Sandboxed srcdoc={srcDoc} params={{
-    node: node, 
-    requestRedirect: url => {
-      if (url.slice(0, 8) == 'https://'){ 
-        window.location.href = url;
+    node: shareable, 
+    requestRedirect: (url, newWindow=false) => {
+      console.log(url, newWindow);
+      if (newWindow) {
+        Object.assign(document.createElement('a'), {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          href: url,
+        }).click();
       } else {
-        router.redirect(url)
+        if (url.slice(0, 8) == 'https://'){ 
+          window.location.href = url;
+        } else {
+          router.redirect(url)
+        }
       }
     },
     requestSearchParams: () => Object.fromEntries(new URLSearchParams(window.location.search)),
@@ -119,7 +164,7 @@
       otherStorage.removeItem('payPerRunSessionKey');
     },
     requestReauthenticate: async () => {
-      user = await TK.authenticate(entrypoint, null, null)
+      [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
       globalThis.user = user;
       console.log(user)
       userId = await user.path.strip('/')
@@ -130,7 +175,7 @@
 
 <style>
   main {
-    min-height: calc(100vh - 80px);
+    min-height: calc(100vh - 68px);
     box-shadow: 0px -5px 15px #aaa;
     width: 100%;
     margin: 0;
@@ -144,5 +189,18 @@
     width: 100%;
     background-color: var(--background);
     flex-grow: 1;
+  }
+  .avatar {
+    height: 40px;
+    border-radius: 20px;
+    filter: grayscale(20%);
+    opacity: 50%;
+  }
+  .avatar:hover {
+    opacity: 80%;
+  }
+  .requestButton {
+    padding: 5px;
+    line-height: 12px;
   }
 </style>

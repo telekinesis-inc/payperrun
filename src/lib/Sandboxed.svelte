@@ -74,9 +74,11 @@
   })
 </script>
 
-<main bind:clientHeight={height}>
-  <iframe sandbox="allow-scripts" srcdoc={srcdoc} bind:this={iframe} title="test" height={height-5} width="100%"/>
-</main>
+{#if srcdoc}
+  <main bind:clientHeight={height}>
+    <iframe sandbox="allow-scripts" srcdoc={srcdoc} bind:this={iframe} title="test" height={height-5} width="100%"/>
+  </main>
+{/if}
 
 <style>
   iframe {

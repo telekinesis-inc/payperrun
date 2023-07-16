@@ -19,6 +19,7 @@
 		z-index: 100;
 	}
 	#header-container {
+		height: 45px;
     display: flex;
 		padding: 10px;
     flex-direction: row;
