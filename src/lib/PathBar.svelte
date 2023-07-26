@@ -5,7 +5,7 @@
 
 <main>
   {#each path.split('/') as step, i}
-    <a href={`/${path.split('/').slice(0, i+1).join('/')}`}>{step}/</a>
+    <a class:owner={i==0} class:root={i==0 && step == '>'} href={`/${path.split('/').slice(0, i+1).join('/')}`}>/{step}</a>
   {/each}
 </main>
 
@@ -19,7 +19,21 @@
     /* font-weight: 800; */
   }
   main a {
-    color: var(--secondary);
+    color: var(--tertiary);
     text-decoration: solid;
+  }
+  .owner {
+    border-radius: 25px;
+    padding: 5px 10px 5px 5px;
+    margin: 5px;
+    color: var(--primary);
+    border: solid var(--primary) 1px;
+  }
+  .root {
+    font-size: 24px;
+    font-family: monospace;
+    font-weight: 800;
+    color: var(--background);
+    background-color: var(--primary);
   }
 </style>

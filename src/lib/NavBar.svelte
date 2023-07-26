@@ -32,11 +32,4 @@
 		/* max-width: 1400px; */
 		justify-content: stretch;
 	}
-  #header-container :global(a) {
-    color: var(--tertiary);
-		/* font-weight: 800; */
-  }
-	/* header a:visited {
-		color: var(--primary-color);
-	} */
 </style>

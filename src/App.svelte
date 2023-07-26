@@ -13,9 +13,9 @@
   let showUserMenu = false;
   let pendingRequests = [];
 
-  const STATES = Object.fromEntries(
-    ['inBetween', 'unauthenticated', 'awaitingAuthentication', 'authenticated', 'error'].map(x => [x, x])
-  );
+  // const STATES = Object.fromEntries(
+  //   ['inBetween', 'unauthenticated', 'awaitingAuthentication', 'authenticated', 'error'].map(x => [x, x])
+  // );
 
   // const TK = globalThis.TK;
   globalThis.TK = TK;
@@ -89,27 +89,15 @@
 <svelte:head><title>PayPerRun.com | {title || "Code. Publish. Earn"}</title></svelte:head>
 
 <NavBar>
-  {#if !path}
-    <div style='flex-grow: 1;'/>
-  {/if}
-    <div style="display: flex; align-items: center">
-      <!-- <a class="" href="/" style="padding: 0px; margin-right: 8px">
-        <img src='/favicon.png' class='' alt='≈' style='height: 48px;'/>
-      </a> -->
-      <!-- {#if path} -->
-        <a class="logo" href={userId? "/>/market" : "/>/welcome"} style="font-weight: 800; font-size: 24px; color: var(--primary-color); font-family: monospace">
-          <span style="background-color: var(--primary); color: var(--background); border-radius: 25px; padding: 5px 10px 5px 5px; margin: 5px; font-weight:900">
-            {"/>"}
-          </span>
-        </a>
-      {#if !path}
-        <a class="" href="/" style="font-weight: 800; font-size: 24px; color: 'var(--primary-color)'; font-family: monospace">
-          <span style="color: var(--primary); ">PayPerRun</span>.com
-        </a>
-      {/if}
-    </div>
   {#if path}
     <PathBar path={path}/>
+  {:else}
+    <!-- <div style='flex-grow: 1;'/> -->
+    <div style="display: flex; align-items: center">
+      <a class="" href="/" style="font-weight: 800; font-size: 24px; color: 'var(--primary-color)'; font-family: monospace">
+        <span style="color: var(--primary); ">PayPerRun</span>.com
+      </a>
+    </div>
   {/if}
   <div style='flex-grow: 1;'/>
   {#if userId}
@@ -118,7 +106,7 @@
       <div slot='content' style='box-shadow: 0px -5px 15px #aaa;'>
         {#each pendingRequests as [requestId, requestInfo], i}
           <div style='display: flex'>
-            <p style="flex-grow:100">"{requestInfo.destination_path}" requests {requestInfo.energy}J + {requestInfo.power}W</p>
+            <p style="flex-grow:100">"{requestInfo.destination_path}" requests {requestInfo.initial_energy}J + {requestInfo.power}W</p>
             <button on:click={() => respondRequest(requestId, true, i)} class='requestButton'>Approve</button>
             <button on:click={() => respondRequest(requestId, false, i)} class='requestButton'>Decline</button>
           </div>
@@ -168,6 +156,9 @@
       globalThis.user = user;
       console.log(user)
       userId = await user.path.strip('/')
+    },
+    requestCopyToClipboard: (text) => {
+      navigator.clipboard.writeText(text);
     }
   }}/>
   <div id='filler'></div>
