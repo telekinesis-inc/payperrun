@@ -1,22 +1,22 @@
 <script>
+  import { createEventDispatcher } from "svelte";
   // export let style='border: none; background-color: transparent;';
   // export let title;
-  export let width = 200;
-  export let left = 0;
   export let contentStyle;
+  
+  const dispatch = createEventDispatcher()
 
   export let showContent = false;
   let buttonHeight;
 </script>
 
-<div class="dropdown" on:keydown={(e) => {console.log(e)}} on:mouseleave={() => {showContent = false}}>
-  <div class="dropdown-button" on:click={() => {console.log('here', showContent);showContent = !showContent;}} 
-    on:keydown={(e) => {console.log(e)}} bind:clientHeight={buttonHeight}>
+<div class="dropdown" on:keydown={(e) => {console.log(e)}} on:mouseleave={() => dispatch('mouseleave', {})}>
+  <div class="dropdown-button" bind:clientHeight={buttonHeight}>
     <slot name='button'/>
   </div>
   <!-- <button style={style} on:click={() => {showContent = !showContent}}>{title}</button> -->
   {#if showContent}
-    <div class="dropdown-content" style='width: {width}px; left: {left}px; padding-top: {buttonHeight || 0}px; {contentStyle || ''}'>
+    <div class="dropdown-content" style='padding-top: {buttonHeight || 0}px; {contentStyle || ''}'>
       <slot name='content'/>
     </div>
   {/if}

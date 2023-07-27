@@ -20,7 +20,7 @@
 
   // const TK = globalThis.TK;
   globalThis.TK = TK;
-
+  
   onMount(async () => {
     // globalThis.TK = TK;
     globalThis.router = router; 
@@ -85,6 +85,17 @@
     await user.battery.respond_request(requestId, response); 
     pendingRequests = [...pendingRequests.slice(0, i), ...pendingRequests.slice(i+1)];
   }
+  const requestNode = async (fullNode=false) => {
+    if (fullNode) {
+      if (path.slice(0, 2) != '>/') {
+        throw new Error('Only />  nodes can request the fullNode');
+      }
+      return node;
+    }
+    let tmpEntrypoint = await (new TK.Entrypoint('wss://payper.run') as any);
+    return await new TK.Telekinesis(await shareable._delegate(await tmpEntrypoint._session.sessionKey.publicSerial()), tmpEntrypoint._session);
+  }
+    
 </script>
 
 <svelte:head><title>PayPerRun.com | {title || "Code. Publish. Earn"}</title></svelte:head>
@@ -120,7 +131,7 @@
 
 <main>  
   <Sandboxed srcdoc={srcDoc} params={{
-    node: shareable, 
+    requestNode, 
     requestRedirect: (url, newWindow=false) => {
       console.log(url, newWindow);
       if (newWindow) {

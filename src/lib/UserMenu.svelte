@@ -19,8 +19,9 @@
   }
 </script>
 
-<Dropdown bind:showContent={showUserMenu} width={400} left={-360} contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background);">
-  <img src={avatarSrc} alt="avatar" class='avatar' slot="button" style={showUserMenu ? "opacity: 100%" : ""}/>
+<Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false}}
+contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -360px">
+  <img src={avatarSrc} alt="avatar" class='avatar' slot="button" style={showUserMenu ? "opacity: 100%" : ""} on:click={() => {showUserMenu = !showUserMenu}} on:keydown={() => {}}/>
   <div slot='content' >
     <a href='/{userId}' class='item'>User node</a>
 
