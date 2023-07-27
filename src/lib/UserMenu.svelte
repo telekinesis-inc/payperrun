@@ -20,7 +20,7 @@
 </script>
 
 <Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false}}
-contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -360px">
+contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -354px">
   <img src={avatarSrc} alt="avatar" class='avatar' slot="button" style={showUserMenu ? "opacity: 100%" : ""} on:click={() => {showUserMenu = !showUserMenu}} on:keydown={() => {}}/>
   <div slot='content' >
     <a href='/{userId}' class='item'>User node</a>
@@ -52,8 +52,8 @@ contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-col
 
 <style>
   .avatar {
-    height: 40px;
-    border-radius: 20px;
+    height: 46px;
+    border-radius: 23px;
     filter: grayscale(20%);
     opacity: 50%;
     cursor: pointer;

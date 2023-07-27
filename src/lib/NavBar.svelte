@@ -17,10 +17,12 @@
 		width: 100%;
 		background-color: var(--background);
 		z-index: 100;
+		height: 55px;
 	}
 	#header-container {
+		height: 100%;
     display: flex;
-		padding: 7px;
+		padding: 0px 10px;
     flex-direction: row;
     align-items: center;
 		font-size: 18px;

@@ -3,31 +3,51 @@
   import NamePrompt from "./NamePrompt.svelte";
 
   export let path;
-  export let selectedStep = undefined;
+  export let userId;
+  export let preSelectedStep = undefined;
+  export let readOnly = true;
+  export let listNodes = undefined;
+  export let childrenNodes = {};
+
   // console.log('PathBar', path, mode)
 //  href={`/${path.split('/').slice(0, i+1).join('/')}`}
-  let nSteps, editing= false, hover;
+  let selectedStep, nSteps, editing= false, hover, nodes;
   $: nSteps = path.split('/').length;
 </script>
 
 <main>
-  {#each path.split('/') as step, i}
+  {#each path.slice(1).split('/') as step, i}
     <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-    <button class='path-btn' on:mouseenter={() => {hover = i}} on:mouseleave={() => {hover = undefined}}>
-      <span class:owner={i==0} class:root={i==0 && step == '>'}>/{step}</span><span class='arrow' class:transparent={hover != i}>{'▼'}</span></button>
-  {/each}
-  <Dropdown showContent={(selectedStep === nSteps) || false} on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
-  contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;">
-    <button slot="button" class='path-btn' on:click={() => {selectedStep = nSteps == selectedStep ? undefined : nSteps}} 
-      on:mouseenter={() => {hover = nSteps}} on:mouseleave={() => {hover = undefined}}>
-      /...
-      <span class='arrow' class:transparent={hover != nSteps}>{'▼'}</span>
+    <button class='path-btn' class:first-btn={i==0} on:mouseenter={() => {hover = i}} on:mouseleave={() => {hover = undefined}}>
+      <span class:owner={i==0} class:root={i==0 && step == '>'} class:other-owner={i==0 && step != '>' && step != userId}>
+        /{step}</span><span class='arrow' class:transparent={hover != i}>{'▼'}
+      </span>
     </button>
-    <div slot='content' >
-      <NamePrompt title='New Node' initialButtonStyle="flex-grow: 1;" on:submit={(v) => {editing = false; console.log(v)}} 
-        on:cancel={() => {editing = false}} on:edit={() => {editing = true}}/>
-    </div>
-  </Dropdown>
+  {/each}
+  {#if !readOnly || Object.keys(childrenNodes).length}
+    <Dropdown showContent={(preSelectedStep === nSteps) || (selectedStep === nSteps)} on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
+    contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;">
+      <button slot="button" class='path-btn' on:click={async () => {
+          selectedStep = nSteps == selectedStep ? undefined : nSteps
+          nodes = childrenNodes;
+          nodes = await listNodes(path);
+        }} 
+        on:mouseenter={() => {hover = nSteps}} on:mouseleave={() => {hover = undefined}}>
+        /...
+        <span class='arrow' class:transparent={hover != nSteps}>{'▼'}</span>
+      </button>
+      <div slot='content' >
+        {#each Object.entries(nodes) as [name, path]}
+          <a class='item' href={path}>{name}</a>
+        {/each}
+
+        {#if !readOnly}
+          <NamePrompt title='New Node' initialButtonStyle="flex-grow: 1;" on:submit={(v) => {editing = false; console.log(v)}} 
+            on:cancel={() => {editing = false}} on:edit={() => {editing = true}}/>
+        {/if}
+      </div>
+    </Dropdown>
+  {/if}
 </main>
 
 <style>
@@ -37,13 +57,22 @@
     /* background-color: var(--tertiary); */
     text-align: left;
     padding: 3px;
+    display: flex;
+    align-items: center;
     /* font-weight: 800; */
   }
   .path-btn {
     color: var(--tertiary);
-    text-decoration: solid;
-    padding: 10px 1px 7px 1px;
+    padding: 12px 1px 7px 1px;
     background-color: transparent;
+  }
+  .path-btn:hover {
+    border-color: var(--tertiary);
+  }
+  .first-btn {
+    /* padding: 7px 1px; */
+    height: 45px;
+    padding: 1px;
   }
   .arrow {
     font-size: 11px;
@@ -58,11 +87,22 @@
     color: var(--primary);
     border: solid var(--primary) 1px;
   }
+  .other-owner {
+    color: var(--secondary);
+    border: solid var(--secondary) 1px;
+  }
   .root {
     font-size: 24px;
     font-family: monospace;
     font-weight: 800;
     color: var(--background);
     background-color: var(--primary);
+  }
+  .item {
+    display: flex;
+    justify-content: left;
+    line-height: 50px;
+    border-bottom: solid #7771 1px;
+    padding: 0px 20px
   }
 </style>

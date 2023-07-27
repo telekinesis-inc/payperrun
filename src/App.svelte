@@ -10,7 +10,7 @@
   import Dropdown from './lib/Dropdown.svelte';
     import UserMenu from './lib/UserMenu.svelte';
 
-  let path, title, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable;
+  let path, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable, isReadOnly;
   let showUserMenu = false;
   let pendingRequests = [];
 
@@ -30,18 +30,18 @@
 
     globalThis.user = user;
     router('/*', async (ctx) => {
-      title = ctx.params[0];
-      path = title;
+      path = ('/'+ ctx.params[0]).replaceAll(/\/\/+/g, '/').replace(/\/$/, '');
       if (user) {
-        node = await user.get('/'+path);
+        node = await user.get(path);
         globalThis.node = node;
+        isReadOnly = await node.is_read_only
         try {
           const searchParams = new URLSearchParams(window.location.search);
-          const displayParamsStr = searchParams.get('displayParams')
+          const displayParamsStr = searchParams.get('displayParams');
           shareable = await node.shareable;
           srcDoc = await node.display(searchParams.get('display'), displayParamsStr && JSON.parse(displayParamsStr));
         } catch (e) {
-          srcDoc = "<h1>Default display will go here</h1>"
+          srcDoc = undefined;//"<h1>Default display will go here</h1>"
         }
         window.scrollTo(0, 0);
       } else {
@@ -87,7 +87,7 @@
   }
   const requestNode = async (fullNode=false) => {
     if (fullNode) {
-      if (path.slice(0, 2) != '>/') {
+      if (path.slice(0, 3) != '/>/') {
         throw new Error('Only />  nodes can request the fullNode');
       }
       return node;
@@ -98,11 +98,13 @@
     
 </script>
 
-<svelte:head><title>PayPerRun.com | {title || "Code. Publish. Earn"}</title></svelte:head>
+<svelte:head><title>PayPerRun.com {path || "Code. Publish. Earn"}</title></svelte:head>
 
 <NavBar>
   {#if path}
-    <PathBar path={path}/>
+    <PathBar path={path} readOnly={isReadOnly} listNodes={async (p) => {
+      return {};
+    }} childrenNodes={{}} userId={userId}/>
   {:else}
     <!-- <div style='flex-grow: 1;'/> -->
     <div style="display: flex; align-items: center">
