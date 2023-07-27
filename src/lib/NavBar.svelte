@@ -19,15 +19,13 @@
 		z-index: 100;
 	}
 	#header-container {
-		height: 45px;
     display: flex;
-		padding: 10px;
+		padding: 7px;
     flex-direction: row;
     align-items: center;
 		font-size: 18px;
 		/* font-weight: 800; */
 		/* letter-spacing: 0.4px; */
-		color: var(--primary-color);
 		margin: 0 auto;
 		/* max-width: 1400px; */
 		justify-content: stretch;

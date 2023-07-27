@@ -8,6 +8,7 @@
   import Sandboxed from './lib/Sandboxed.svelte';
   import PathBar from './lib/PathBar.svelte';
   import Dropdown from './lib/Dropdown.svelte';
+    import UserMenu from './lib/UserMenu.svelte';
 
   let path, title, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable;
   let showUserMenu = false;
@@ -56,7 +57,7 @@
         
         await user.battery.register_callback((r) => {pendingRequests.push([r.request_id, r]); showUserMenu = true; console.log(r)})
 
-        pendingRequests = Object.entries(await user.battery.requests_dict || {});
+        pendingRequests = Object.entries(await user.battery.requests || {});
         console.log(pendingRequests)
         if (pendingRequests.length) {
           showUserMenu = true;
@@ -101,19 +102,17 @@
   {/if}
   <div style='flex-grow: 1;'/>
   {#if userId}
-    <Dropdown bind:showContent={showUserMenu} width={500} left={-460}>
-      <img src={avatarSrc} alt="{userId} avatar image" class='avatar' slot="button" style={showUserMenu ? "opacity: 100%" : ""}/>
-      <div slot='content' style='box-shadow: 0px -5px 15px #aaa;'>
-        {#each pendingRequests as [requestId, requestInfo], i}
-          <div style='display: flex'>
-            <p style="flex-grow:100">"{requestInfo.destination_path}" requests {requestInfo.initial_energy}J + {requestInfo.power}W</p>
-            <button on:click={() => respondRequest(requestId, true, i)} class='requestButton'>Approve</button>
-            <button on:click={() => respondRequest(requestId, false, i)} class='requestButton'>Decline</button>
-          </div>
-        {/each}
-
-      </div>
-    </Dropdown>
+    <UserMenu {...{showUserMenu, avatarSrc, userId, pendingRequests, respondRequest}} getBatteryStatus={async () => {return await user.battery.status}}
+      signOut={async () => {
+        let signOut = await user.get('/>/sign_out')(); 
+        await signOut(); 
+        userId = undefined;
+        avatarSrc = undefined;
+        router.redirect('/>/welcome');
+        user = entrypoint;
+        globalThis.user = user;
+        }}
+      />
   {:else}
     <button on:click={() => router.redirect('/>/sign_in')}>Join / Sign-in</button>
   {/if}
@@ -166,7 +165,7 @@
 
 <style>
   main {
-    min-height: calc(100vh - 68px);
+    min-height: calc(100vh - 60px);
     box-shadow: 0px -5px 15px #aaa;
     width: 100%;
     margin: 0;
@@ -180,18 +179,5 @@
     width: 100%;
     background-color: var(--background);
     flex-grow: 1;
-  }
-  .avatar {
-    height: 40px;
-    border-radius: 20px;
-    filter: grayscale(20%);
-    opacity: 50%;
-  }
-  .avatar:hover {
-    opacity: 80%;
-  }
-  .requestButton {
-    padding: 5px;
-    line-height: 12px;
   }
 </style>
