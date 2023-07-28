@@ -4,7 +4,7 @@
 
   export let path;
   export let userId;
-  export let preSelectedStep = undefined;
+  export let preOpenChildren = false;
   export let readOnly = true;
   export let listNodes = undefined;
   export let childrenNodes = {};
@@ -16,17 +16,18 @@
 <main>
   {#each path.slice(1).split('/') as step, i}
     <Dropdown 
-      showContent={(preSelectedStep === i) || (selectedStep === i)} 
+      showContent={!preOpenChildren && (selectedStep === i)} 
       on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
       contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;"
     >
       <button slot="button" class='path-btn' class:first-btn={i==0} 
         on:click={async () => {
+          preOpenChildren = false;
           selectedStep = i == selectedStep ? undefined : i
           nodes = null;
           nodes = await listNodes(path.split('/').slice(0, i+1).join('/') || '/');
         }}
-        on:mouseenter={() => {hover = nSteps}} on:mouseleave={() => {hover = undefined}}
+        on:mouseenter={() => {hover = i}} on:mouseleave={() => {hover = undefined}}
       >
         <span class:owner={i==0} class:root={i==0 && step == '>'} class:other-owner={i==0 && step != '>' && step != userId}>
           /{step}
@@ -46,12 +47,13 @@
   {/each}
   {#if !readOnly || Object.keys(childrenNodes).length}
     <Dropdown 
-      showContent={(preSelectedStep === nSteps) || (selectedStep === nSteps)} 
+      showContent={preOpenChildren || (selectedStep === nSteps)} 
       on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
       contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;"
     >
       <button slot="button" class='path-btn' on:click={async () => {
-          selectedStep = nSteps == selectedStep ? undefined : nSteps
+          selectedStep = preOpenChildren || (nSteps == selectedStep) ? undefined : nSteps
+          preOpenChildren = false;
           nodes = childrenNodes;
           nodes = await listNodes(path);
         }}
@@ -61,7 +63,7 @@
         <span class='arrow' class:transparent={hover != nSteps}>{'▼'}</span>
       </button>
       <div slot='content' >
-        {#each Object.entries(nodes) as [name, path]}
+        {#each ((preOpenChildren && Object.entries(childrenNodes)) || Object.entries(nodes) ) as [name, path]}
           <a class='item' href={path}>{name}</a>
         {/each}
 

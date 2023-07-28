@@ -21,7 +21,8 @@
 
 <Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false}}
 contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -354px">
-  <img src={avatarSrc} alt="avatar" class='avatar' slot="button" style={showUserMenu ? "opacity: 100%" : ""} on:click={() => {showUserMenu = !showUserMenu}} on:keydown={() => {}}/>
+  <img src={avatarSrc || '/__/user.svg'} alt="avatar" class='avatar' slot="button" class:invert-dark={avatarSrc === undefined} title="User Controls"
+  style={showUserMenu ? "opacity: 100%" : ""} on:click={() => {showUserMenu = !showUserMenu}} on:keydown={() => {}}/>
   <div slot='content' >
     <a href='/{userId}' class='item'>User node</a>
 
@@ -60,6 +61,7 @@ contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-col
   }
   .avatar:hover {
     opacity: 80%;
+    box-shadow: 0px 0px 5px #777 ;
   }
   .requestButton {
     padding: 5px;
@@ -76,5 +78,10 @@ contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-col
     flex-grow: 100;
     margin: 0px;
 
+  }
+  @media (prefers-color-scheme: dark) {
+    .invert-dark {
+      filter: invert();
+    }
   }
 </style>

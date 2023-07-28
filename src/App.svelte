@@ -9,8 +9,9 @@
   import PathBar from './lib/PathBar.svelte';
   import Dropdown from './lib/Dropdown.svelte';
     import UserMenu from './lib/UserMenu.svelte';
+    import DisplayMenu from './lib/DisplayMenu.svelte';
 
-  let path, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable, isReadOnly, childrenNodes;
+  let path, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display;
   let showUserMenu = false;
   let pendingRequests = [];
 
@@ -33,16 +34,24 @@
       path = ('/'+ ctx.params[0]).replaceAll(/\/\/+/g, '/').replace(/\/$/, '');
       if (user) {
         childrenNodes = await listNodes(path)
-        node = await user.get(path);
-        globalThis.node = node;
-        isReadOnly = await node.is_read_only
         try {
-          const searchParams = new URLSearchParams(window.location.search);
-          const displayParamsStr = searchParams.get('displayParams');
-          shareable = await node.shareable;
-          srcDoc = await node.display(searchParams.get('display'), displayParamsStr && JSON.parse(displayParamsStr));
-        } catch (e) {
-          srcDoc = undefined;//"<h1>Default display will go here</h1>"
+          node = await user.get(path);
+          globalThis.node = node;
+          isReadOnly = await node.is_read_only
+          try {
+            const searchParams = new URLSearchParams(window.location.search);
+            const displayParamsStr = searchParams.get('displayParams');
+            shareable = await node.shareable;
+            display = searchParams.get('display'); 
+            srcDoc = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
+            displayOptions = [null, ...await node.get_attribute('display').list_attributes()];
+          } catch (e) {
+            srcDoc = undefined;//"<h1>Default display will go here</h1>"
+          }
+        } catch(e) {
+          node = null;
+          srcDoc = '';
+          console.log(e);
         }
         window.scrollTo(0, 0);
       } else {
@@ -109,7 +118,7 @@
 
 <NavBar>
   {#if path}
-    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId}/>
+    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId} preOpenChildren={!node}/>
   {:else}
     <!-- <div style='flex-grow: 1;'/> -->
     <div style="display: flex; align-items: center">
@@ -117,6 +126,10 @@
         <span style="color: var(--primary); ">PayPerRun</span>.com
       </a>
     </div>
+  {/if}
+  <div style='flex-basis: 20px;'/>
+  {#if node}
+    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} /> 
   {/if}
   <div style='flex-grow: 1;'/>
   {#if userId}
