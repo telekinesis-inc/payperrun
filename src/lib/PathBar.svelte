@@ -9,30 +9,54 @@
   export let listNodes = undefined;
   export let childrenNodes = {};
 
-  // console.log('PathBar', path, mode)
-//  href={`/${path.split('/').slice(0, i+1).join('/')}`}
   let selectedStep, nSteps, editing= false, hover, nodes;
   $: nSteps = path.split('/').length;
 </script>
 
 <main>
   {#each path.slice(1).split('/') as step, i}
-    <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-    <button class='path-btn' class:first-btn={i==0} on:mouseenter={() => {hover = i}} on:mouseleave={() => {hover = undefined}}>
-      <span class:owner={i==0} class:root={i==0 && step == '>'} class:other-owner={i==0 && step != '>' && step != userId}>
-        /{step}</span><span class='arrow' class:transparent={hover != i}>{'▼'}
-      </span>
-    </button>
+    <Dropdown 
+      showContent={(preSelectedStep === i) || (selectedStep === i)} 
+      on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
+      contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;"
+    >
+      <button slot="button" class='path-btn' class:first-btn={i==0} 
+        on:click={async () => {
+          selectedStep = i == selectedStep ? undefined : i
+          nodes = null;
+          nodes = await listNodes(path.split('/').slice(0, i+1).join('/') || '/');
+        }}
+        on:mouseenter={() => {hover = nSteps}} on:mouseleave={() => {hover = undefined}}
+      >
+        <span class:owner={i==0} class:root={i==0 && step == '>'} class:other-owner={i==0 && step != '>' && step != userId}>
+          /{step}
+        </span>
+        <span class='arrow' class:transparent={hover != i}>{'▼'} </span>
+      </button>
+      <div slot='content' >
+        {#if nodes}
+          {#each Object.entries(nodes) as [name, path]}
+            <a class='item' href={path}>{name}</a>
+          {/each}
+        {:else}
+          <p class='item'>...</p>
+        {/if}
+      </div>
+    </Dropdown>
   {/each}
   {#if !readOnly || Object.keys(childrenNodes).length}
-    <Dropdown showContent={(preSelectedStep === nSteps) || (selectedStep === nSteps)} on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
-    contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;">
+    <Dropdown 
+      showContent={(preSelectedStep === nSteps) || (selectedStep === nSteps)} 
+      on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
+      contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;"
+    >
       <button slot="button" class='path-btn' on:click={async () => {
           selectedStep = nSteps == selectedStep ? undefined : nSteps
           nodes = childrenNodes;
           nodes = await listNodes(path);
-        }} 
-        on:mouseenter={() => {hover = nSteps}} on:mouseleave={() => {hover = undefined}}>
+        }}
+        on:mouseenter={() => {hover = nSteps}} on:mouseleave={() => {hover = undefined}}
+      >
         /...
         <span class='arrow' class:transparent={hover != nSteps}>{'▼'}</span>
       </button>
@@ -65,9 +89,10 @@
     color: var(--tertiary);
     padding: 12px 1px 7px 1px;
     background-color: transparent;
+    transition: 0.3s;
   }
   .path-btn:hover {
-    border-color: var(--tertiary);
+    border-color: #9995;
   }
   .first-btn {
     /* padding: 7px 1px; */

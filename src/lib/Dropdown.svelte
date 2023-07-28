@@ -10,7 +10,7 @@
   let buttonHeight;
 </script>
 
-<div class="dropdown" on:keydown={(e) => {console.log(e)}} on:mouseleave={() => dispatch('mouseleave', {})}>
+<div class="dropdown" on:keydown={(e) => {}} on:mouseleave={() => dispatch('mouseleave', {})}>
   <div class="dropdown-button" bind:clientHeight={buttonHeight}>
     <slot name='button'/>
   </div>

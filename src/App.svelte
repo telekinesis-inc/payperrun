@@ -10,7 +10,7 @@
   import Dropdown from './lib/Dropdown.svelte';
     import UserMenu from './lib/UserMenu.svelte';
 
-  let path, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable, isReadOnly;
+  let path, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable, isReadOnly, childrenNodes;
   let showUserMenu = false;
   let pendingRequests = [];
 
@@ -32,6 +32,7 @@
     router('/*', async (ctx) => {
       path = ('/'+ ctx.params[0]).replaceAll(/\/\/+/g, '/').replace(/\/$/, '');
       if (user) {
+        childrenNodes = await listNodes(path)
         node = await user.get(path);
         globalThis.node = node;
         isReadOnly = await node.is_read_only
@@ -95,6 +96,12 @@
     let tmpEntrypoint = await (new TK.Entrypoint('wss://payper.run') as any);
     return await new TK.Telekinesis(await shareable._delegate(await tmpEntrypoint._session.sessionKey.publicSerial()), tmpEntrypoint._session);
   }
+  const listNodes = async p => {
+    console.log(p);
+    let lst = await user.list_nodes(p);
+    console.log(lst);
+    return lst.reduce((p, v) => {p['/'+v.split('/')[v.split('/').length - 1]] = v; return p}, {});
+  }
     
 </script>
 
@@ -102,9 +109,7 @@
 
 <NavBar>
   {#if path}
-    <PathBar path={path} readOnly={isReadOnly} listNodes={async (p) => {
-      return {};
-    }} childrenNodes={{}} userId={userId}/>
+    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId}/>
   {:else}
     <!-- <div style='flex-grow: 1;'/> -->
     <div style="display: flex; align-items: center">
@@ -115,7 +120,8 @@
   {/if}
   <div style='flex-grow: 1;'/>
   {#if userId}
-    <UserMenu {...{showUserMenu, avatarSrc, userId, pendingRequests, respondRequest}} getBatteryStatus={async () => {return await user.battery.status}}
+    <UserMenu {...{showUserMenu, avatarSrc, userId, pendingRequests, respondRequest}} 
+      getBatteryStatus={async () => {return await user.battery.status}}
       signOut={async () => {
         let signOut = await user.get('/>/sign_out')(); 
         await signOut(); 
@@ -127,7 +133,7 @@
         }}
       />
   {:else}
-    <button on:click={() => router.redirect('/>/sign_in')}>Join / Sign-in</button>
+    <a href='/>/sign_in' id='sign-in-header'>Join / Sign-in</a>
   {/if}
 </NavBar>
 
@@ -192,5 +198,16 @@
     width: 100%;
     background-color: var(--background);
     flex-grow: 1;
+  }
+  #sign-in-header {
+    border: solid var(--tertiary) 1px;
+    color: var(--tertiary);
+    border-radius: 10px;
+    padding: 10px 20px 7px;
+    transition: 0.5s; 
+  }
+  #sign-in-header:hover {
+    border-color: var(--primary);
+    color: var(--primary);
   }
 </style>
