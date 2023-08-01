@@ -14,7 +14,7 @@
   import ServicesList from './lib/ServicesList.svelte';
 
   let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
-    authenticating, displayServices, displayWidth, displayHeight, pathOpen, showDisplayMenu;
+    authenticating, displayServices, displayWidth, displayHeight, pathOpen, showDisplayMenu, displayParams;
   let showUserMenu = false;
   let pendingRequests = [];
   let showModal = false;
@@ -50,32 +50,39 @@
 
           try {
             if (display && display.includes('/')) {
-              srcDoc = await user.get('/>/market').get(display)(displayParamsStr && JSON.parse(displayParamsStr));
+              srcDoc = await user.get('/>/market')().get(display)._call([], displayParamsStr && JSON.parse(displayParamsStr));
               displayState = DSTATES.ready;
             }
           } catch (e) {
             console.log(e);
             searchParams.delete('display')
             searchParams.delete('displayParams')
-            router.replace('?'+Array.from(searchParams.entries()).map(([k, v]) => k+'='+v).join('&'));
+            // router.replace('?'+Array.from(searchParams.entries()).map(([k, v]) => k+'='+v).join('&'));
           }
-          if (displayState != DSTATES.ready) {
-            let displayAttribute = await node.get_attribute('display');
+          let displayAttribute = await node.get_attribute('display');
+          if (displayState == DSTATES.ready) {
+            if (await displayAttribute.is_placeholder) {
+              displayOptions = [];
+            } else {
+              displayOptions = [... await displayAttribute.list_attributes()];
+            }
+          } else {
             if (await displayAttribute.is_placeholder) {
               displayState = DSTATES.noDisplay;
               showDisplayMenu = true;
               displayOptions = [];
             } else {
               try {
-                srcDoc = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
+                [srcDoc, displayParams] = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
                 displayState = DSTATES.ready;
               } catch(e) {
                 displayState = DSTATES.error;
                 console.log(e)
               }
-              displayOptions = [null, ... await displayAttribute.list_attributes()];
+              displayOptions = [... await displayAttribute.list_attributes()];
             }
           }
+          displayParams = {...(displayParams || {}), ...(displayParamsStr && JSON.parse(displayParams))};
           shareable = await node.shareable;
           isReadOnly = await node.is_read_only
         } catch (e) {
@@ -120,14 +127,36 @@
     await user.battery.respond_request(requestId, response); 
     pendingRequests = [...pendingRequests.slice(0, i), ...pendingRequests.slice(i+1)];
   }
-  const requestNode = async (fullNode=false) => {
+  const requestNode = async (path=undefined, readOnly=true, fullNode=false) => {
     if (fullNode) {
-      if (path.slice(0, 3) != '/>/') {
+      if (path.slice(0, 3) != '/>/' || display.includes('/')) {
         throw new Error('Only />  nodes can request the fullNode');
+      }
+      if (path && typeof(path) === 'string') {
+        if (path[0] == '/') {
+          if (readOnly){
+            return await user.get(path).read_only;
+          }
+          return await user.get(path)
+        }
+        if (readOnly) {
+          return await node.get(path).read_only;
+        }
+        return await node.get(path);
+      }
+      if (readOnly) {
+        return await node.read_only
       }
       return node;
     }
+    if (path) {
+      throw new Error('Request node.path not implemented yet');
+    }
     let tmpEntrypoint = await (new TK.Entrypoint('wss://payper.run') as any);
+    if (readOnly) {
+      let out = await shareable.read_only
+      return await new TK.Telekinesis(await out._delegate(await tmpEntrypoint._session.sessionKey.publicSerial()), tmpEntrypoint._session);
+    }
     return await new TK.Telekinesis(await shareable._delegate(await tmpEntrypoint._session.sessionKey.publicSerial()), tmpEntrypoint._session);
   }
   const listNodes = async p => {
@@ -155,7 +184,7 @@
   <div style='flex-basis: 20px;'/>
   {#if node}
     <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} bind:showDisplayMenu={showDisplayMenu} 
-      on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/tag/display').get_attribute('list').value}}/> 
+      on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/core/tag/display').get_attribute('list').value}}/> 
   {/if}
   <div style='flex-grow: 1;'/>
   {#if authenticating}
@@ -166,7 +195,7 @@
         getBatteryStatus={async () => {return await user.battery.status}}
         bind:showUserMenu={showUserMenu}
         signOut={async () => {
-          let signOut = await user.get('/>/sign_out')(); 
+          let signOut = await user.get('/>/auth/sign_out')(); 
           await signOut(); 
           userId = undefined;
           avatarSrc = undefined;
@@ -176,13 +205,13 @@
           }}
         />
     {:else}
-      <a href='/>/sign_in' id='sign-in-header'>Join {(displayWidth > 500) ? '/ Sign-in':''}</a>
+      <a href='/>/auth/sign_in' id='sign-in-header'>Join {(displayWidth > 500) ? '/ Sign-in':''}</a>
     {/if}
   {/if}
 </NavBar>
 
 <main>  
-  <Modal visible={showModal} on:close={() => {showModal = false}}>
+  <Modal visible={showModal} on:close={() => {showModal = false}} style='min-height: 70vh;'>
     {#if displayServices && displayServices.length}
       <ServicesList services={displayServices} on:select={(p) => router.redirect('?display='+p.detail.path)}/>
 
@@ -190,46 +219,53 @@
   </Modal>
   {#if displayState == DSTATES.ready}
     <Sandboxed srcdoc={srcDoc} params={{
-      requestNode, 
-      requestRedirect: (url, newWindow=false) => {
-        console.log(url, newWindow);
-        if (newWindow) {
-          Object.assign(document.createElement('a'), {
-            target: '_blank',
-            rel: 'noopener noreferrer',
-            href: url,
-          }).click();
-        } else {
-          if (url.slice(0, 8) == 'https://'){ 
-            window.location.href = url;
+      request: {
+        node: requestNode,
+        redirect: (url, newWindow=false) => {
+          console.log(url, newWindow);
+          if (newWindow) {
+            Object.assign(document.createElement('a'), {
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              href: url,
+            }).click();
           } else {
-            router.redirect(url)
+            if (url.slice(0, 8) == 'https://'){ 
+              window.location.href = url;
+            } else {
+              router.redirect(url)
+            }
           }
+        },
+        searchParams: () => Object.fromEntries(new URLSearchParams(window.location.search)),
+        storeKey: async longTerm => {
+          if (path.slice(0, 3) != '/>/' || display.includes('/')) {
+            throw new Error('Only />  nodes can request the fullNode');
+          }
+          let storage, otherStorage;
+          if (longTerm) {
+            storage = localStorage;
+            otherStorage = sessionStorage;
+          } else {
+            storage = sessionStorage;
+            otherStorage = localStorage;
+          }
+          storage.setItem('payPerRunSessionKey', await user._session.sessionKey.exportKey())
+          otherStorage.removeItem('payPerRunSessionKey');
+        },
+        reauthenticate: async () => {
+          if (path.slice(0, 3) != '/>/' || display.includes('/')) {
+            throw new Error('Only />  nodes can request the fullNode');
+          }
+          [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
+          globalThis.user = user;
+          console.log(user)
+          userId = await user.path.strip('/')
+        },
+        copyToClipboard: (text) => {
+          navigator.clipboard.writeText(text);
         }
-      },
-      requestSearchParams: () => Object.fromEntries(new URLSearchParams(window.location.search)),
-      requestStoreKey: async longTerm => {
-        let storage, otherStorage;
-        if (longTerm) {
-          storage = localStorage;
-          otherStorage = sessionStorage;
-        } else {
-          storage = sessionStorage;
-          otherStorage = localStorage;
-        }
-        storage.setItem('payPerRunSessionKey', await user._session.sessionKey.exportKey())
-        otherStorage.removeItem('payPerRunSessionKey');
-      },
-      requestReauthenticate: async () => {
-        [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
-        globalThis.user = user;
-        console.log(user)
-        userId = await user.path.strip('/')
-      },
-      requestCopyToClipboard: (text) => {
-        navigator.clipboard.writeText(text);
-      }
-    }}/>
+    }}}/>
     <div id='filler'></div>
   {:else}
     <p style="opacity: 30%">{displayState}</p>

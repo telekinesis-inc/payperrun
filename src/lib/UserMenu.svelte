@@ -27,7 +27,7 @@ contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-col
     <a href='/{userId}' class='item'>User node</a>
 
     {#if showUserMenu}
-      <a href='/>/battery' class='item'>
+      <a href='/>/market/battery' class='item'>
       Battery status: 
       {#await updateBatteryStatus()}
       ...

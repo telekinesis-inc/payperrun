@@ -3,6 +3,7 @@
 
   const dispatch = createEventDispatcher();
   export let visible;
+  export let style = '';
 </script>
   
 <div id="modal" style="
@@ -13,10 +14,11 @@
     <button id="close-button" style="" on:click={()=>{visible = false; dispatch('close')}}>
       &#x2716;
     </button>
-    <div id="modal-content">
+    <div id="modal-content" style={style}>
       <slot></slot>
     </div>
   </div>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
   <div id="overlay" on:click={() => {visible = false; dispatch('close')}}></div>
 </div>
 
@@ -51,6 +53,10 @@
   #modal-content {
     overflow: auto;
     max-height: calc(95vh - 60px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
   :global(ul) {
     text-align: left;
