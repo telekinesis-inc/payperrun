@@ -8,8 +8,9 @@
   export let readOnly = true;
   export let listNodes = undefined;
   export let childrenNodes = {};
+  export let selectedStep = undefined;
 
-  let selectedStep, nSteps, editing= false, hover, nodes;
+  let nSteps, editing= false, hover, nodes;
   $: nSteps = path.split('/').length;
 </script>
 
@@ -64,7 +65,7 @@
       </button>
       <div slot='content' >
         {#each ((preOpenChildren && Object.entries(childrenNodes)) || Object.entries(nodes) ) as [name, path]}
-          <a class='item' href={path}>{name}</a>
+          <a class='item' href={path} on:click={() => {selectedStep = undefined; preOpenChildren = false}}>{name}</a>
         {/each}
 
         {#if !readOnly}
@@ -92,6 +93,8 @@
     padding: 12px 1px 7px 1px;
     background-color: transparent;
     transition: 0.3s;
+    display: flex;
+    align-items: center;
   }
   .path-btn:hover {
     border-color: #9995;

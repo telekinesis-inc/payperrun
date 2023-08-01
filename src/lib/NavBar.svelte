@@ -1,9 +1,10 @@
 <script>
-	let headerHeight;
+	export let headerHeight = 55;
+	export let scroll = false;
 </script>
 
-<header bind:clientHeight={headerHeight}>
-	<div id='header-container'>
+<header bind:clientHeight={headerHeight} style={(scroll? 'overflow-x: auto;': '')+'height: '+headerHeight+'px;'} >
+	<div id='header-container' >
     <slot></slot>
 	</div>
 </header>
@@ -17,11 +18,11 @@
 		width: 100%;
 		background-color: var(--background);
 		z-index: 100;
-		height: 55px;
+		/* height: 55px; */
 	}
 	#header-container {
-		height: 100%;
     display: flex;
+		/* overflow-x: auto; */
 		padding: 0px 10px;
     flex-direction: row;
     align-items: center;

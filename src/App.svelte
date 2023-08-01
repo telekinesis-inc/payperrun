@@ -7,17 +7,21 @@
   import NavBar from './lib/NavBar.svelte';
   import Sandboxed from './lib/Sandboxed.svelte';
   import PathBar from './lib/PathBar.svelte';
-  import Dropdown from './lib/Dropdown.svelte';
-    import UserMenu from './lib/UserMenu.svelte';
-    import DisplayMenu from './lib/DisplayMenu.svelte';
+  // import Dropdown from './lib/Dropdown.svelte';
+  import UserMenu from './lib/UserMenu.svelte';
+  import DisplayMenu from './lib/DisplayMenu.svelte';
+  import Modal from './lib/Modal.svelte';
+  import ServicesList from './lib/ServicesList.svelte';
 
-  let path, srcDoc, sessionKey, user, node, entrypoint, userId, state, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display;
+  let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
+    authenticating, displayServices, displayWidth, displayHeight, pathOpen, showDisplayMenu;
   let showUserMenu = false;
   let pendingRequests = [];
+  let showModal = false;
 
-  // const STATES = Object.fromEntries(
-  //   ['inBetween', 'unauthenticated', 'awaitingAuthentication', 'authenticated', 'error'].map(x => [x, x])
-  // );
+  const DSTATES = Object.fromEntries(
+    ['loading', 'unauthorized', 'newNode', 'noDisplay', 'ready', 'error'].map(x => [x, x])
+  );
 
   // const TK = globalThis.TK;
   globalThis.TK = TK;
@@ -32,47 +36,75 @@
     globalThis.user = user;
     router('/*', async (ctx) => {
       path = ('/'+ ctx.params[0]).replaceAll(/\/\/+/g, '/').replace(/\/$/, '');
+      isReadOnly = true;
+      displayState = DSTATES.loading;
+      displayOptions = []; 
       if (user) {
         childrenNodes = await listNodes(path)
         try {
           node = await user.get(path);
           globalThis.node = node;
-          isReadOnly = await node.is_read_only
+          const searchParams = new URLSearchParams(window.location.search);
+          const displayParamsStr = searchParams.get('displayParams');
+          display = searchParams.get('display'); 
+
           try {
-            const searchParams = new URLSearchParams(window.location.search);
-            const displayParamsStr = searchParams.get('displayParams');
-            shareable = await node.shareable;
-            display = searchParams.get('display'); 
-            srcDoc = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
-            displayOptions = [null, ...await node.get_attribute('display').list_attributes()];
+            if (display && display.includes('/')) {
+              srcDoc = await user.get('/>/market').get(display)(displayParamsStr && JSON.parse(displayParamsStr));
+              displayState = DSTATES.ready;
+            }
           } catch (e) {
-            srcDoc = undefined;//"<h1>Default display will go here</h1>"
+            console.log(e);
+            searchParams.delete('display')
+            searchParams.delete('displayParams')
+            router.replace('?'+Array.from(searchParams.entries()).map(([k, v]) => k+'='+v).join('&'));
           }
-        } catch(e) {
+          if (displayState != DSTATES.ready) {
+            let displayAttribute = await node.get_attribute('display');
+            if (await displayAttribute.is_placeholder) {
+              displayState = DSTATES.noDisplay;
+              showDisplayMenu = true;
+              displayOptions = [];
+            } else {
+              try {
+                srcDoc = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
+                displayState = DSTATES.ready;
+              } catch(e) {
+                displayState = DSTATES.error;
+                console.log(e)
+              }
+              displayOptions = [null, ... await displayAttribute.list_attributes()];
+            }
+          }
+          shareable = await node.shareable;
+          isReadOnly = await node.is_read_only
+        } catch (e) {
           node = null;
-          srcDoc = '';
+          globalThis.node = node;
           console.log(e);
+          displayState = DSTATES.unauthorized;
         }
-        window.scrollTo(0, 0);
-      } else {
+        // window.scrollTo(0, 0);
       }
       // stats.record('sign_in').then(() => null)
     })
     router.start();
     if (sessionKey) {
       try {
+        authenticating = true;
         [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
+        authenticating = false;
         userId = await user.path.strip('/');
         router.replace(window.location.pathname.slice(1) ? window.location.pathname + window.location.search : ('/'+userId))
         
         await user.battery.register_callback((r) => {pendingRequests.push([r.request_id, r]); showUserMenu = true; console.log(r)})
 
         pendingRequests = Object.entries(await user.battery.requests || {});
-        console.log(pendingRequests)
         if (pendingRequests.length) {
           showUserMenu = true;
         }
       } catch (e) {
+        authenticating = false;
         console.log(e);
       }
     }
@@ -81,13 +113,6 @@
       router.replace(window.location.pathname.slice(1) ? window.location.pathname + window.location.search : '/>/welcome')
     }
     globalThis.user = user;
-    // try {
-    //   user = await user;
-    // } catch (e) {
-    //   console.log(e);
-    //   user = backend;
-    //   globalThis.user = user;
-    // }
 
   })  
   // const cache = new LRU(x => x+'.'+ Date.now()/1000);
@@ -106,9 +131,7 @@
     return await new TK.Telekinesis(await shareable._delegate(await tmpEntrypoint._session.sessionKey.publicSerial()), tmpEntrypoint._session);
   }
   const listNodes = async p => {
-    console.log(p);
     let lst = await user.list_nodes(p);
-    console.log(lst);
     return lst.reduce((p, v) => {p['/'+v.split('/')[v.split('/').length - 1]] = v; return p}, {});
   }
     
@@ -116,9 +139,11 @@
 
 <svelte:head><title>PayPerRun.com {path || "Code. Publish. Earn"}</title></svelte:head>
 
-<NavBar>
+<svelte:window bind:innerWidth={displayWidth} bind:innerHeight={displayHeight}/>
+
+<NavBar headerHeight={displayWidth < 600 && ((pathOpen != undefined) || showDisplayMenu || showUserMenu) ? displayHeight*.75 : 55} scroll={displayWidth < 600}>
   {#if path}
-    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId} preOpenChildren={!node}/>
+    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId} preOpenChildren={!node} bind:selectedStep={pathOpen}/>
   {:else}
     <!-- <div style='flex-grow: 1;'/> -->
     <div style="display: flex; align-items: center">
@@ -129,70 +154,86 @@
   {/if}
   <div style='flex-basis: 20px;'/>
   {#if node}
-    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} /> 
+    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} bind:showDisplayMenu={showDisplayMenu} 
+      on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/tag/display').get_attribute('list').value}}/> 
   {/if}
   <div style='flex-grow: 1;'/>
-  {#if userId}
-    <UserMenu {...{showUserMenu, avatarSrc, userId, pendingRequests, respondRequest}} 
-      getBatteryStatus={async () => {return await user.battery.status}}
-      signOut={async () => {
-        let signOut = await user.get('/>/sign_out')(); 
-        await signOut(); 
-        userId = undefined;
-        avatarSrc = undefined;
-        router.redirect('/>/welcome');
-        user = entrypoint;
-        globalThis.user = user;
-        }}
-      />
+  {#if authenticating}
+    ...
   {:else}
-    <a href='/>/sign_in' id='sign-in-header'>Join / Sign-in</a>
+    {#if userId}
+      <UserMenu {...{avatarSrc, userId, pendingRequests, respondRequest}} 
+        getBatteryStatus={async () => {return await user.battery.status}}
+        bind:showUserMenu={showUserMenu}
+        signOut={async () => {
+          let signOut = await user.get('/>/sign_out')(); 
+          await signOut(); 
+          userId = undefined;
+          avatarSrc = undefined;
+          router.redirect('/>/welcome');
+          user = entrypoint;
+          globalThis.user = user;
+          }}
+        />
+    {:else}
+      <a href='/>/sign_in' id='sign-in-header'>Join {(displayWidth > 500) ? '/ Sign-in':''}</a>
+    {/if}
   {/if}
 </NavBar>
 
 <main>  
-  <Sandboxed srcdoc={srcDoc} params={{
-    requestNode, 
-    requestRedirect: (url, newWindow=false) => {
-      console.log(url, newWindow);
-      if (newWindow) {
-        Object.assign(document.createElement('a'), {
-          target: '_blank',
-          rel: 'noopener noreferrer',
-          href: url,
-        }).click();
-      } else {
-        if (url.slice(0, 8) == 'https://'){ 
-          window.location.href = url;
+  <Modal visible={showModal} on:close={() => {showModal = false}}>
+    {#if displayServices && displayServices.length}
+      <ServicesList services={displayServices} on:select={(p) => router.redirect('?display='+p.detail.path)}/>
+
+    {/if}
+  </Modal>
+  {#if displayState == DSTATES.ready}
+    <Sandboxed srcdoc={srcDoc} params={{
+      requestNode, 
+      requestRedirect: (url, newWindow=false) => {
+        console.log(url, newWindow);
+        if (newWindow) {
+          Object.assign(document.createElement('a'), {
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            href: url,
+          }).click();
         } else {
-          router.redirect(url)
+          if (url.slice(0, 8) == 'https://'){ 
+            window.location.href = url;
+          } else {
+            router.redirect(url)
+          }
         }
+      },
+      requestSearchParams: () => Object.fromEntries(new URLSearchParams(window.location.search)),
+      requestStoreKey: async longTerm => {
+        let storage, otherStorage;
+        if (longTerm) {
+          storage = localStorage;
+          otherStorage = sessionStorage;
+        } else {
+          storage = sessionStorage;
+          otherStorage = localStorage;
+        }
+        storage.setItem('payPerRunSessionKey', await user._session.sessionKey.exportKey())
+        otherStorage.removeItem('payPerRunSessionKey');
+      },
+      requestReauthenticate: async () => {
+        [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
+        globalThis.user = user;
+        console.log(user)
+        userId = await user.path.strip('/')
+      },
+      requestCopyToClipboard: (text) => {
+        navigator.clipboard.writeText(text);
       }
-    },
-    requestSearchParams: () => Object.fromEntries(new URLSearchParams(window.location.search)),
-    requestStoreKey: async longTerm => {
-      let storage, otherStorage;
-      if (longTerm) {
-        storage = localStorage;
-        otherStorage = sessionStorage;
-      } else {
-        storage = sessionStorage;
-        otherStorage = localStorage;
-      }
-      storage.setItem('payPerRunSessionKey', await user._session.sessionKey.exportKey())
-      otherStorage.removeItem('payPerRunSessionKey');
-    },
-    requestReauthenticate: async () => {
-      [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
-      globalThis.user = user;
-      console.log(user)
-      userId = await user.path.strip('/')
-    },
-    requestCopyToClipboard: (text) => {
-      navigator.clipboard.writeText(text);
-    }
-  }}/>
-  <div id='filler'></div>
+    }}/>
+    <div id='filler'></div>
+  {:else}
+    <p style="opacity: 30%">{displayState}</p>
+  {/if}
 </main>
 
 <style>
