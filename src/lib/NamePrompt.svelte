@@ -1,14 +1,15 @@
 <script>
   import { createEventDispatcher } from 'svelte';
 
-  export let title;
+  export let editing = false;
   export let initialValue = '';
-  export let initialButtonStyle = '';
+  export let placeholder = ''
+  export let regexTest = /[A-z0-9_]+/;
 
   let lastValue = initialValue;
-  let editing = false;
   let value = lastValue;
 
+  $: testFail = regexTest && (value != (regexTest.exec(value) && regexTest.exec(value)[0]))
   // console.log(childName, originalChildName)
 
   const dispatch = createEventDispatcher()
@@ -20,12 +21,11 @@
 
 <div class="container">
   {#if editing}
-    <input bind:value={value} on:keydown={e => e.key == 'Enter' ? accept(): e.key == 'Esc' ? cancel(): null} style='min-width: 0px'/>
-    <button on:click={cancel} >{'⨯'}</button>
-    <button on:click={accept} disabled={value.length == 0} >{'✓'}</button>
+    <input bind:value={value} on:keydown={e => e.key == 'Enter' ? accept(): e.key == 'Esc' ? cancel(): null} style='min-width: 0px' placeholder={placeholder}/>
+    <button class="cancel" on:click={cancel} >{'⨯'}</button>
+    <button on:click={accept} disabled={testFail} title={testFail?`Input does not pass regex: '${regexTest}'`: undefined}>{'✓'}</button>
   {:else}
-    <button style={initialButtonStyle || ''}
-      on:click={() => {editing = true; dispatch('edit')}} >{title}</button>
+    <slot/>
   {/if}
 </div>
 
@@ -37,5 +37,24 @@
   } 
   input {
     flex-grow: 1;
+    border-radius: 5px;
+    border: solid #8884 1px;
+    padding: 1px 10px;
+  }
+  input::placeholder {
+    font-style: italic;
+  }
+  input:focus {
+    outline: none;
+  }
+  button:disabled {
+    color: #8884;
+  }
+  button:disabled:hover {
+    border-color: #8884;
+  }
+  .cancel:hover {
+    border-color: var(--secondary);
+
   }
 </style>

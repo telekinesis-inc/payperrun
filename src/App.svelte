@@ -12,6 +12,7 @@
   import DisplayMenu from './lib/DisplayMenu.svelte';
   import Modal from './lib/Modal.svelte';
   import ServicesList from './lib/ServicesList.svelte';
+    import { readonly } from 'svelte/store';
 
   let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
     authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams;
@@ -175,7 +176,7 @@
 <NavBar headerHeight={displayWidth < 600? Math.max((pathOpen != undefined) && pathBarHeight || 0, showDisplayMenu && displayMenuHeight || 0, showUserMenu && userMenuHeight || 0) || null: null} scroll={displayWidth < 600}>
   {#if path}
     <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId} preOpenChildren={!node} bind:selectedStep={pathOpen} 
-      on:expanded={e => {pathBarHeight = e.detail}}/>
+      on:expanded={e => {pathBarHeight = e.detail}} router={router}/>
   {:else}
     <!-- <div style='flex-grow: 1;'/> -->
     <div style="display: flex; align-items: center">
@@ -186,8 +187,22 @@
   {/if}
   <div style='flex-basis: 20px;'/>
   {#if node}
-    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} bind:showDisplayMenu={showDisplayMenu} on:expanded={e => {displayMenuHeight = e.detail}}
-      on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/core/tag/display').get_attribute('list').value}}/> 
+    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} readOnly={isReadOnly} showDisplayMenu={showDisplayMenu} on:expanded={e => {displayMenuHeight = e.detail}}
+      on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/core/tag/display').get_attribute('list').value}}
+      on:saveDisplay={async ({detail}) => {
+        console.log('save', detail)
+        if (await user.get(path).is_placeholder) {
+          await node.set(null);
+        } 
+        if (await node.get_attribute('display').is_placeholder) {
+          await node.get_attribute('display').set(null);
+        }
+        await node.get_attribute('display').get_attribute(detail || null).set({
+          'pipeline': [['node', ['get', 'get'], ['call', [['/>/market'], {}]], ['call', [[], {}]], ['get', 'get'], ['call', [[display], {}]], ['call', [[], {}]]]]
+        }).get_attribute('params').set(displayParams);
+        window.history.pushState({},'',  window.location.pathname + (detail ? '?display='+detail : ''));
+      }}
+      /> 
   {/if}
   <div style='flex-grow: 1;'/>
   {#if authenticating}
@@ -266,8 +281,23 @@
           console.log(user)
           userId = await user.path.strip('/')
         },
+        refreshNode: async () => {
+          node = await user.get(path);
+          globalThis.node = node;
+        },
         copyToClipboard: (text) => {
           navigator.clipboard.writeText(text);
+        },
+        displayParams: displayParams && JSON.parse(JSON.stringify(displayParams)),
+        saveDisplayParams: async (newParams) => {
+          displayParams = newParams;
+          if (display && display.includes('/') || isReadOnly) {
+            const searchParams = new URLSearchParams(window.location.search);
+            searchParams.set('displayParams', JSON.stringify(displayParams))
+            window.history.pushState({}, '', window.location.pathname + '?' + Array.from(searchParams.entries()).map(x => x.join('=')).join('&'));
+          } else {
+            await node.get_attribute('display').get_attribute(display).get_attribute('params').set(displayParams)
+          }
         }
     }}}/>
     <div id='filler'></div>

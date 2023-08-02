@@ -4,6 +4,7 @@
   import NamePrompt from "./NamePrompt.svelte";
 
   export let path;
+  export let router;
   export let userId;
   export let preOpenChildren = false;
   export let readOnly = true;
@@ -74,8 +75,9 @@
         {/each}
 
         {#if !readOnly}
-          <NamePrompt title='New Node' initialButtonStyle="flex-grow: 1;" on:submit={(v) => {editing = false; console.log(v)}} 
-            on:cancel={() => {editing = false}} on:edit={() => {editing = true}}/>
+          <NamePrompt on:submit={(v) => {editing = false; router.redirect(path+'/'+v.detail); console.log(v)}} on:cancel={() => {editing = false}} bind:editing={editing} placeholder="new child node's path">
+            <button style='flex-grow: 1;' on:click={() => {editing = true}}>New Node</button>
+          </NamePrompt>
         {/if}
       </div>
     </Dropdown>
