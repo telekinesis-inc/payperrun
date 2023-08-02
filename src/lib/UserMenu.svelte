@@ -1,4 +1,5 @@
 <script>
+  import { createEventDispatcher } from "svelte";
   import Dropdown from "./Dropdown.svelte";
 
   export let showUserMenu;
@@ -10,6 +11,8 @@
   export let signOut;
 
   let batteryStatus;
+
+  const dispatch = createEventDispatcher();
   const updateBatteryStatus = async () => {
     batteryStatus = '...';
     
@@ -19,10 +22,11 @@
   }
 </script>
 
-<Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false}}
-contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -354px">
+<Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false}} on:expanded={({detail}) => dispatch('expanded', detail)}
+  contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -354px"
+>
   <img src={avatarSrc || '/__/user.svg'} alt="avatar" class='avatar' slot="button" class:invert-dark={avatarSrc === undefined} title="User Controls"
-  style={showUserMenu ? "opacity: 100%" : ""} on:click={() => {showUserMenu = !showUserMenu}} on:keydown={() => {}}/>
+  style={showUserMenu ? "opacity: 100%" : ""} on:click={() => {showUserMenu = !showUserMenu;}} on:keydown={() => {}}/>
   <div slot='content' >
     <a href='/{userId}' class='item'>User node</a>
 

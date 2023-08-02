@@ -1,13 +1,16 @@
 <script>
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, afterUpdate } from "svelte";
   // export let style='border: none; background-color: transparent;';
   // export let title;
   export let contentStyle;
   
   const dispatch = createEventDispatcher()
 
-  export let showContent = false;
+  export let showContent = true;
   let buttonHeight;
+  let contentHeight;
+
+  afterUpdate(() => showContent && dispatch('expanded', contentHeight) )
 </script>
 
 <div class="dropdown" on:keydown={(e) => {}} on:mouseleave={() => dispatch('mouseleave', {})}>
@@ -16,7 +19,7 @@
   </div>
   <!-- <button style={style} on:click={() => {showContent = !showContent}}>{title}</button> -->
   {#if showContent}
-    <div class="dropdown-content" style='padding-top: {buttonHeight || 0}px; {contentStyle || ''}'>
+    <div class="dropdown-content" style='padding-top: {buttonHeight || 0}px; {contentStyle || ''}' bind:clientHeight={contentHeight}>
       <slot name='content'/>
     </div>
   {/if}

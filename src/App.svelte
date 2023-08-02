@@ -14,7 +14,9 @@
   import ServicesList from './lib/ServicesList.svelte';
 
   let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
-    authenticating, displayServices, displayWidth, displayHeight, pathOpen, showDisplayMenu, displayParams;
+    authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams;
+  
+  let pathBarHeight, displayMenuHeight, userMenuHeight;
   let showUserMenu = false;
   let pendingRequests = [];
   let showModal = false;
@@ -127,29 +129,29 @@
     await user.battery.respond_request(requestId, response); 
     pendingRequests = [...pendingRequests.slice(0, i), ...pendingRequests.slice(i+1)];
   }
-  const requestNode = async (path=undefined, readOnly=true, fullNode=false) => {
+  const requestNode = async (requestedPath=undefined, readOnly=true, fullNode=false) => {
     if (fullNode) {
-      if (path.slice(0, 3) != '/>/' || display.includes('/')) {
+      if (path.slice(0, 3) != '/>/' || (display && display.includes('/'))) {
         throw new Error('Only />  nodes can request the fullNode');
       }
-      if (path && typeof(path) === 'string') {
+      if (requestedPath && typeof(requestedPath) === 'string') {
         if (path[0] == '/') {
           if (readOnly){
-            return await user.get(path).read_only;
+            return await user.get(requestedPath).read_only;
           }
-          return await user.get(path)
+          return await user.get(requestedPath)
         }
         if (readOnly) {
-          return await node.get(path).read_only;
+          return await node.get(requestedPath).read_only;
         }
-        return await node.get(path);
+        return await node.get(requestedPath);
       }
       if (readOnly) {
         return await node.read_only
       }
       return node;
     }
-    if (path) {
+    if (requestedPath) {
       throw new Error('Request node.path not implemented yet');
     }
     let tmpEntrypoint = await (new TK.Entrypoint('wss://payper.run') as any);
@@ -168,11 +170,12 @@
 
 <svelte:head><title>PayPerRun.com {path || "Code. Publish. Earn"}</title></svelte:head>
 
-<svelte:window bind:innerWidth={displayWidth} bind:innerHeight={displayHeight}/>
+<svelte:window bind:innerWidth={displayWidth}/>
 
-<NavBar headerHeight={displayWidth < 600 && ((pathOpen != undefined) || showDisplayMenu || showUserMenu) ? displayHeight*.75 : 55} scroll={displayWidth < 600}>
+<NavBar headerHeight={displayWidth < 600? Math.max((pathOpen != undefined) && pathBarHeight || 0, showDisplayMenu && displayMenuHeight || 0, showUserMenu && userMenuHeight || 0) || null: null} scroll={displayWidth < 600}>
   {#if path}
-    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId} preOpenChildren={!node} bind:selectedStep={pathOpen}/>
+    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId} preOpenChildren={!node} bind:selectedStep={pathOpen} 
+      on:expanded={e => {pathBarHeight = e.detail}}/>
   {:else}
     <!-- <div style='flex-grow: 1;'/> -->
     <div style="display: flex; align-items: center">
@@ -183,7 +186,7 @@
   {/if}
   <div style='flex-basis: 20px;'/>
   {#if node}
-    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} bind:showDisplayMenu={showDisplayMenu} 
+    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} bind:showDisplayMenu={showDisplayMenu} on:expanded={e => {displayMenuHeight = e.detail}}
       on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/core/tag/display').get_attribute('list').value}}/> 
   {/if}
   <div style='flex-grow: 1;'/>
@@ -194,6 +197,7 @@
       <UserMenu {...{avatarSrc, userId, pendingRequests, respondRequest}} 
         getBatteryStatus={async () => {return await user.battery.status}}
         bind:showUserMenu={showUserMenu}
+        on:expanded={e => {userMenuHeight = e.detail}}
         signOut={async () => {
           let signOut = await user.get('/>/auth/sign_out')(); 
           await signOut(); 
@@ -239,7 +243,7 @@
         },
         searchParams: () => Object.fromEntries(new URLSearchParams(window.location.search)),
         storeKey: async longTerm => {
-          if (path.slice(0, 3) != '/>/' || display.includes('/')) {
+          if (path.slice(0, 3) != '/>/' || (display && display.includes('/'))) {
             throw new Error('Only />  nodes can request the fullNode');
           }
           let storage, otherStorage;
@@ -254,7 +258,7 @@
           otherStorage.removeItem('payPerRunSessionKey');
         },
         reauthenticate: async () => {
-          if (path.slice(0, 3) != '/>/' || display.includes('/')) {
+          if (path.slice(0, 3) != '/>/' || (display && display.includes('/'))) {
             throw new Error('Only />  nodes can request the fullNode');
           }
           [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})

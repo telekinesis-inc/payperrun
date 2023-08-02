@@ -1,4 +1,5 @@
 <script>
+  import { createEventDispatcher } from "svelte";
   import Dropdown from "./Dropdown.svelte";
   import NamePrompt from "./NamePrompt.svelte";
 
@@ -10,7 +11,9 @@
   export let childrenNodes = {};
   export let selectedStep = undefined;
 
-  let nSteps, editing= false, hover, nodes;
+  const dispatch = createEventDispatcher();
+
+  let nSteps, editing= false, hover, nodes; 
   $: nSteps = path.split('/').length;
 </script>
 
@@ -19,6 +22,7 @@
     <Dropdown 
       showContent={!preOpenChildren && (selectedStep === i)} 
       on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
+      on:expanded={({detail}) => dispatch('expanded', detail)}
       contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;"
     >
       <button slot="button" class='path-btn' class:first-btn={i==0} 
@@ -35,7 +39,7 @@
         </span>
         <span class='arrow' class:transparent={hover != i}>{'▼'} </span>
       </button>
-      <div slot='content' >
+      <div slot='content'>
         {#if nodes}
           {#each Object.entries(nodes) as [name, path]}
             <a class='item' href={path}>{name}</a>
@@ -50,6 +54,7 @@
     <Dropdown 
       showContent={preOpenChildren || (selectedStep === nSteps)} 
       on:mouseleave={() => { if (!editing) {selectedStep = undefined} }}
+      on:expanded={({detail}) => dispatch('expanded', detail)}
       contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;"
     >
       <button slot="button" class='path-btn' on:click={async () => {
@@ -63,9 +68,9 @@
         /...
         <span class='arrow' class:transparent={hover != nSteps}>{'▼'}</span>
       </button>
-      <div slot='content' >
+      <div slot='content'>
         {#each ((preOpenChildren && Object.entries(childrenNodes)) || Object.entries(nodes) ) as [name, path]}
-          <a class='item' href={path} on:click={() => {selectedStep = undefined; preOpenChildren = false}}>{name}</a>
+          <a class='item' href={path} on:click={() => {selectedStep = undefined; console.log(selectedStep); preOpenChildren = false}}>{name}</a>
         {/each}
 
         {#if !readOnly}

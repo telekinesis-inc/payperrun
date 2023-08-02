@@ -10,10 +10,10 @@
 
 </script>
 
-<Dropdown showContent={showDisplayMenu} on:mouseleave={() => {showDisplayMenu = false}}
+<Dropdown showContent={showDisplayMenu} on:mouseleave={() => {showDisplayMenu = false;}} on:expanded={({detail}) => dispatch('expanded', detail)}
 contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px;">
   <button slot="button" class="dropdown" title="Display Selector" style={showDisplayMenu ? "opacity: 100%l" : ""} 
-  on:click={() => {showDisplayMenu = !showDisplayMenu}} on:keydown={() => {}}>
+  on:click={() => {showDisplayMenu = !showDisplayMenu;}} on:keydown={() => {}}>
     <img src={'/__/eye.svg'} alt="display selector" class='eye' />
 
     <p class="display-name" style=''>{selectedDisplay || ''}</p>

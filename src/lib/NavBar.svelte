@@ -1,9 +1,9 @@
 <script>
-	export let headerHeight = 55;
+	export let headerHeight = undefined;
 	export let scroll = false;
 </script>
 
-<header bind:clientHeight={headerHeight} style={(scroll? 'overflow-x: auto;': '')+'height: '+headerHeight+'px;'} >
+<header bind:clientHeight={headerHeight} style={(scroll? 'overflow-x: auto;': '')+ (headerHeight && 'height: '+headerHeight+'px;')} >
 	<div id='header-container' >
     <slot></slot>
 	</div>
