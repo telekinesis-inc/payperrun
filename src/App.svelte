@@ -12,10 +12,10 @@
   import DisplayMenu from './lib/DisplayMenu.svelte';
   import Modal from './lib/Modal.svelte';
   import ServicesList from './lib/ServicesList.svelte';
-    import { readonly } from 'svelte/store';
+  
 
   let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
-    authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams;
+    authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams, isPlaceholder;
   
   let pathBarHeight, displayMenuHeight, userMenuHeight;
   let showUserMenu = false;
@@ -40,6 +40,7 @@
     router('/*', async (ctx) => {
       path = ('/'+ ctx.params[0]).replaceAll(/\/\/+/g, '/').replace(/\/$/, '');
       isReadOnly = true;
+      isPlaceholder = true;
       displayState = DSTATES.loading;
       displayOptions = []; 
       if (user) {
@@ -49,6 +50,7 @@
           globalThis.node = node;
           const searchParams = new URLSearchParams(window.location.search);
           const displayParamsStr = searchParams.get('displayParams');
+          // console.log('here', displayParamsStr && JSON.parse(displayParamsStr))
           display = searchParams.get('display'); 
 
           try {
@@ -85,9 +87,11 @@
               displayOptions = [... await displayAttribute.list_attributes()];
             }
           }
-          displayParams = {...(displayParams || {}), ...(displayParamsStr && JSON.parse(displayParams))};
+          // console.log('displayParamsStr', displayParamsStr)
+          displayParams = {...(displayParams || {}), ...(displayParamsStr && JSON.parse(displayParamsStr))};
           shareable = await node.shareable;
           isReadOnly = await node.is_read_only
+          isPlaceholder = !isReadOnly && await node.is_placeholder;
         } catch (e) {
           node = null;
           globalThis.node = node;
@@ -172,10 +176,9 @@
 <svelte:head><title>PayPerRun.com {path || "Code. Publish. Earn"}</title></svelte:head>
 
 <svelte:window bind:innerWidth={displayWidth}/>
-
 <NavBar headerHeight={displayWidth < 600? Math.max((pathOpen != undefined) && pathBarHeight || 0, showDisplayMenu && displayMenuHeight || 0, showUserMenu && userMenuHeight || 0) || null: null} scroll={displayWidth < 600}>
   {#if path}
-    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} userId={userId} preOpenChildren={!node} bind:selectedStep={pathOpen} 
+    <PathBar path={path} readOnly={isReadOnly} listNodes={listNodes} childrenNodes={childrenNodes} isPlaceholder={isPlaceholder} userId={userId} preOpenChildren={!node} bind:selectedStep={pathOpen} 
       on:expanded={e => {pathBarHeight = e.detail}} router={router}/>
   {:else}
     <!-- <div style='flex-grow: 1;'/> -->
@@ -187,19 +190,24 @@
   {/if}
   <div style='flex-basis: 20px;'/>
   {#if node}
-    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} readOnly={isReadOnly} showDisplayMenu={showDisplayMenu} on:expanded={e => {displayMenuHeight = e.detail}}
+    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} readOnly={isReadOnly} bind:showDisplayMenu={showDisplayMenu} on:expanded={e => {displayMenuHeight = e.detail}}
       on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/core/tag/display').get_attribute('list').value}}
       on:saveDisplay={async ({detail}) => {
         console.log('save', detail)
         if (await user.get(path).is_placeholder) {
           await node.set(null);
+          isPlaceholder = false;
         } 
+        console.log('save2', isPlaceholder)
         if (await node.get_attribute('display').is_placeholder) {
           await node.get_attribute('display').set(null);
         }
+        console.log('save3', isPlaceholder)
         await node.get_attribute('display').get_attribute(detail || null).set({
           'pipeline': [['node', ['get', 'get'], ['call', [['/>/market'], {}]], ['call', [[], {}]], ['get', 'get'], ['call', [[display], {}]], ['call', [[], {}]]]]
         }).get_attribute('params').set(displayParams);
+        console.log('save4', display)
+        display = detail || null;
         window.history.pushState({},'',  window.location.pathname + (detail ? '?display='+detail : ''));
       }}
       /> 
@@ -228,7 +236,6 @@
     {/if}
   {/if}
 </NavBar>
-
 <main>  
   <Modal visible={showModal} on:close={() => {showModal = false}} style='min-height: 70vh;'>
     {#if displayServices && displayServices.length}
@@ -252,7 +259,22 @@
             if (url.slice(0, 8) == 'https://'){ 
               window.location.href = url;
             } else {
-              router.redirect(url)
+              if (url[0] == '?') {
+                const newSearchParams = new URLSearchParams(url);
+                const searchParams = new URLSearchParams(window.location.search);
+
+                for (let [k, p] of newSearchParams.entries()) {
+                  if (p) {
+                    searchParams.set(k, p);
+                  } else {
+                    searchParams.delete(k);
+                  }
+                }
+                window.history.pushState({}, '', window.location.pathname + '?'+//(Array.from(searchParams.keys()).length && '?' || '') + 
+                  Array.from(searchParams.entries()).map(x => x.join('=')).join('&'));
+              } else {
+                router.redirect(url)
+              }
             }
           }
         },
@@ -278,12 +300,14 @@
           }
           [user, avatarSrc] = await TK.authenticate(entrypoint, null, null, {get_avatar_url: true})
           globalThis.user = user;
-          console.log(user)
+          // console.log(user)
           userId = await user.path.strip('/')
         },
         refreshNode: async () => {
           node = await user.get(path);
           globalThis.node = node;
+          isReadOnly = await node.is_read_only;
+          isPlaceholder = await node.is_placeholder;
         },
         copyToClipboard: (text) => {
           navigator.clipboard.writeText(text);
@@ -294,11 +318,13 @@
           if (display && display.includes('/') || isReadOnly) {
             const searchParams = new URLSearchParams(window.location.search);
             searchParams.set('displayParams', JSON.stringify(displayParams))
+            // console.log( JSON.stringify(displayParams))
             window.history.pushState({}, '', window.location.pathname + '?' + Array.from(searchParams.entries()).map(x => x.join('=')).join('&'));
           } else {
             await node.get_attribute('display').get_attribute(display).get_attribute('params').set(displayParams)
           }
-        }
+        },
+        isDetached: () => display && display.includes('/') || isReadOnly,
     }}}/>
     <div id='filler'></div>
   {:else}

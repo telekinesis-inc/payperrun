@@ -32,13 +32,13 @@
 
     {#if showUserMenu}
       <a href='/>/market/battery' class='item'>
-      Battery status: 
-      {#await updateBatteryStatus()}
-      ...
-      {:then}
-        {batteryStatus}
-      {/await}
-    </a>
+        Battery status: 
+        {#await updateBatteryStatus()}
+        ...
+        {:then}
+          {batteryStatus}
+        {/await}
+      </a>
 
     {/if}
 
@@ -51,6 +51,11 @@
         <button on:click={() => respondRequest(requestId, false, i)} class='requestButton'>Decline</button>
       </div>
     {/each}
+      <div class='compact'>
+        <div><a href='/__/terms.html' target='_blank'>Terms & Conditions</a> | <a href='/__/privacy.html' target='_blank'>Privacy Policy</a></div>
+        <br>
+        © 2023 Telekinesis, Inc.
+      </div>
     
   </div>
 </Dropdown>
@@ -77,6 +82,21 @@
     line-height: 50px;
     border-bottom: solid #7771 1px;
     padding: 0px 20px 0px 20px;
+  }
+  .compact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 20px;
+    font-size: 15px;
+    padding: 10px 0px 5px 0px;
+    opacity: 50%;
+    /* border-bottom: solid #7771 1px; */
+    /* padding: 0px 20px 0px 20px; */
+  }
+  .compact a {
+    color: var(--tertiary);
+    text-decoration: underline;
   }
   .request {
     flex-grow: 100;
