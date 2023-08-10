@@ -7,22 +7,17 @@
   export let userId;
   export let pendingRequests;
   export let respondRequest;
-  export let getBatteryStatus;
+  export let batteryStatus;
   export let signOut;
 
-  let batteryStatus;
+  let batteryStatusStr;
 
   const dispatch = createEventDispatcher();
-  const updateBatteryStatus = async () => {
-    batteryStatus = '...';
-    
-    let status = await getBatteryStatus();
+  $: batteryStatusStr = batteryStatus ? `${batteryStatus.joules}J ${batteryStatus.watts? batteryStatus.watts +'W' :''}` : '...';
 
-    batteryStatus = `${status.joules}J ${status.watts? status.watts +'W' :''}`;
-  }
 </script>
 
-<Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false}} on:expanded={({detail}) => dispatch('expanded', detail)}
+<Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false; dispatch('close')}} on:expanded={({detail}) => dispatch('expanded', detail)}
   contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -354px"
 >
   <img src={avatarSrc || '/__/user.svg'} alt="avatar" class='avatar' slot="button" class:invert-dark={avatarSrc === undefined} title="User Controls"
@@ -32,12 +27,7 @@
 
     {#if showUserMenu}
       <a href='/>/market/battery' class='item'>
-        Battery status: 
-        {#await updateBatteryStatus()}
-        ...
-        {:then}
-          {batteryStatus}
-        {/await}
+        Battery status: {batteryStatusStr}
       </a>
 
     {/if}
@@ -47,7 +37,7 @@
     {#each pendingRequests as [requestId, requestInfo], i}
       <div class="item">
         <p class="request" >"{requestInfo.destination_path}" requests {requestInfo.initial_energy}J + {requestInfo.power}W</p>
-        <button on:click={() => respondRequest(requestId, true, i) && updateBatteryStatus()} class='requestButton'>Approve</button>
+        <button on:click={() => respondRequest(requestId, true, i) } class='requestButton'>Approve</button>
         <button on:click={() => respondRequest(requestId, false, i)} class='requestButton'>Decline</button>
       </div>
     {/each}

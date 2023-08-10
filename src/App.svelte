@@ -7,7 +7,6 @@
   import NavBar from './lib/NavBar.svelte';
   import Sandboxed from './lib/Sandboxed.svelte';
   import PathBar from './lib/PathBar.svelte';
-  // import Dropdown from './lib/Dropdown.svelte';
   import UserMenu from './lib/UserMenu.svelte';
   import DisplayMenu from './lib/DisplayMenu.svelte';
   import Modal from './lib/Modal.svelte';
@@ -15,12 +14,14 @@
   
 
   let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
-    authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams, isPlaceholder;
+    authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams, isPlaceholder, batteryStatus;
   
   let pathBarHeight, displayMenuHeight, userMenuHeight;
   let showUserMenu = false;
   let pendingRequests = [];
   let showModal = false;
+
+  let intervals = {};
 
   const DSTATES = Object.fromEntries(
     ['loading', 'unauthorized', 'newNode', 'noDisplay', 'ready', 'error'].map(x => [x, x])
@@ -52,6 +53,10 @@
           const displayParamsStr = searchParams.get('displayParams');
           // console.log('here', displayParamsStr && JSON.parse(displayParamsStr))
           display = searchParams.get('display'); 
+          shareable = await node.shareable;
+          isReadOnly = await node.is_read_only
+          isPlaceholder = !isReadOnly && await node.is_placeholder;
+          displayParams = {...(displayParams || {}), ...(displayParamsStr && JSON.parse(displayParamsStr))};
 
           try {
             if (display && display.includes('/')) {
@@ -88,10 +93,6 @@
             }
           }
           // console.log('displayParamsStr', displayParamsStr)
-          displayParams = {...(displayParams || {}), ...(displayParamsStr && JSON.parse(displayParamsStr))};
-          shareable = await node.shareable;
-          isReadOnly = await node.is_read_only
-          isPlaceholder = !isReadOnly && await node.is_placeholder;
         } catch (e) {
           node = null;
           globalThis.node = node;
@@ -111,11 +112,12 @@
         userId = await user.path.strip('/');
         router.replace(window.location.pathname.slice(1) ? window.location.pathname + window.location.search : ('/'+userId))
         
-        await user.battery.register_callback((r) => {pendingRequests.push([r.request_id, r]); showUserMenu = true; console.log(r)})
+        await user.battery.register_callback((r) => {pendingRequests = [...pendingRequests, [r.request_id, r]]; showUserMenu = true; setUpdateUserMenuInterval(); console.log(r)})
 
         pendingRequests = Object.entries(await user.battery.requests || {});
         if (pendingRequests.length) {
           showUserMenu = true;
+          setUpdateUserMenuInterval();
         }
       } catch (e) {
         authenticating = false;
@@ -170,6 +172,20 @@
     let lst = await user.list_nodes(p);
     return lst.reduce((p, v) => {p['/'+v.split('/')[v.split('/').length - 1]] = v; return p}, {});
   }
+  
+  const setUpdateUserMenuInterval = () => {
+    const update = async () => {
+      console.log('updatingUserMenu')
+      batteryStatus = undefined;
+      pendingRequests = Object.entries(await user.battery.requests)
+      batteryStatus = await user.battery.status;
+      console.log(batteryStatus)
+    }
+    if (!intervals['updateUserMenu']) {
+      update();
+      intervals['updateUserMenu'] = setInterval(update, 5000)
+    }
+  }
     
 </script>
 
@@ -217,10 +233,10 @@
     ...
   {:else}
     {#if userId}
-      <UserMenu {...{avatarSrc, userId, pendingRequests, respondRequest}} 
-        getBatteryStatus={async () => {return await user.battery.status}}
+      <UserMenu {...{avatarSrc, userId, pendingRequests, respondRequest, batteryStatus}} 
         bind:showUserMenu={showUserMenu}
-        on:expanded={e => {userMenuHeight = e.detail}}
+        on:expanded={e => {userMenuHeight = e.detail; setUpdateUserMenuInterval()}}
+        on:close={() => {clearInterval(intervals['updateUserMenu']); delete intervals['updateUserMenu']}}
         signOut={async () => {
           let signOut = await user.get('/>/auth/sign_out')(); 
           await signOut(); 
