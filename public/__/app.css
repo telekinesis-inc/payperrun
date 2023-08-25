@@ -1,0 +1,88 @@
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400; 
+
+  --primary: #1adb9b;
+  --secondary: #ffaa00;
+  --tertiary: #777;
+  --background: #fdfdfd;
+  --foreground: #242424dd;
+
+  color-scheme: light dark;
+  color: var(--foreground);
+  background-color: var(--background);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+a {
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+/* a:hover {
+  text-decoration: underline;
+} */
+
+html, body {
+	position: relative;
+	width: 100%;
+	z-index: -100;
+}
+
+body {
+	color: var(--foreground);
+	background-color: var(--background);
+	margin: 0;
+	box-sizing: border-box;
+	font-size: smaller;
+}
+
+h1, h2, h3, h4, h5 {
+	color: var(--tertiary);
+	margin-top: 10px;
+	margin-bottom: 10px;
+	text-align: center;
+}
+
+.card {
+  padding: 2em;
+}
+
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #f9f9f9;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: var(--primary);
+}
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tertiary: #c0c0c0;
+    --background: #242424;
+    --foreground: #fffd;
+  }
+  button {
+    background-color: #1a1a1a;
+  }
+}

@@ -14,7 +14,7 @@
   
 
   let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
-    authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams, isPlaceholder, batteryStatus;
+    authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams, isPlaceholder, batteryStatus, displayAttribute;
   
   let pathBarHeight, displayMenuHeight, userMenuHeight;
   let showUserMenu = false;
@@ -69,7 +69,7 @@
             searchParams.delete('displayParams')
             // router.replace('?'+Array.from(searchParams.entries()).map(([k, v]) => k+'='+v).join('&'));
           }
-          let displayAttribute = await node.get_attribute('display');
+          displayAttribute = await node.get_attribute('display');
           if (displayState == DSTATES.ready) {
             if (await displayAttribute.is_placeholder) {
               displayOptions = [];
@@ -83,7 +83,11 @@
               displayOptions = [];
             } else {
               try {
+
+                // console.log(displayParams, displayParamsStr && JSON.stringify(displayParamsStr));
                 [srcDoc, displayParams] = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
+                displayParams = {...(displayParams || {}), ...(displayParamsStr && JSON.parse(displayParamsStr))};
+                // console.log(displayParams)
                 displayState = DSTATES.ready;
               } catch(e) {
                 displayState = DSTATES.error;
@@ -170,7 +174,7 @@
   }
   const listNodes = async p => {
     let lst = await user.list_nodes(p);
-    return lst.reduce((p, v) => {p['/'+v.split('/')[v.split('/').length - 1]] = v; return p}, {});
+    return lst.sort().reduce((p, v) => {p['/'+v.split('/')[v.split('/').length - 1]] = v; return p}, {});
   }
   
   const setUpdateUserMenuInterval = () => {
@@ -189,7 +193,7 @@
     
 </script>
 
-<svelte:head><title>PayPerRun.com {path || "Code. Publish. Earn"}</title></svelte:head>
+<svelte:head><title>PayPerRun.com {path || "Code. Publish. Earn"} {display ? `(${display})` : ''}</title></svelte:head>
 
 <svelte:window bind:innerWidth={displayWidth}/>
 <NavBar headerHeight={displayWidth < 600? Math.max((pathOpen != undefined) && pathBarHeight || 0, showDisplayMenu && displayMenuHeight || 0, showUserMenu && userMenuHeight || 0) || null: null} scroll={displayWidth < 600}>
@@ -206,7 +210,8 @@
   {/if}
   <div style='flex-basis: 20px;'/>
   {#if node}
-    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} readOnly={isReadOnly} bind:showDisplayMenu={showDisplayMenu} on:expanded={e => {displayMenuHeight = e.detail}}
+    <DisplayMenu selectedDisplay={display} availableDisplays={displayOptions} readOnly={isReadOnly} bind:showDisplayMenu={showDisplayMenu}
+      on:expanded={async e => {displayMenuHeight = e.detail; if (!await displayAttribute.is_placeholder) {displayOptions = [... await displayAttribute.list_attributes()];}}}
       on:pickDisplay={async () => {showModal = true; displayServices = await user.get('/>/core/tag/display').get_attribute('list').value}}
       on:saveDisplay={async ({detail}) => {
         console.log('save', detail)

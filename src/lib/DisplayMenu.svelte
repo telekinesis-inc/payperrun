@@ -40,7 +40,7 @@ contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-colo
         <div class='item'>{selectedDisplay}</div>
       {:else}
         <!-- <div class='item'> -->
-          <NamePrompt on:submit={(v) => {editing = false; dispatch('saveDisplay', v.detail);}} on:cancel={() => {editing = false}} bind:editing={editing} placeholder="Display name (empty → default)" regexTest={/[A-z0-9_ ]*/}>
+          <NamePrompt on:submit={(v) => {editing = false; dispatch('saveDisplay', v.detail);}} on:cancel={() => {editing = false}} bind:editing={editing} placeholder="Display name (empty → default)" regexTest={/[A-z0-9_ .\-]*/}>
             <div style='flex-grow: 1; padding: 0px 20px; color: var(--secondary); line-height: 3'>{selectedDisplay}</div>
             <button on:click={() => {editing = true}}>Save</button>
           </NamePrompt>

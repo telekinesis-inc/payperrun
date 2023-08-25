@@ -20,7 +20,7 @@
 <Dropdown showContent={showUserMenu} on:mouseleave={() => {showUserMenu = false; dispatch('close')}} on:expanded={({detail}) => dispatch('expanded', detail)}
   contentStyle="border-radius: 20px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 400px; left: -354px"
 >
-  <img src={avatarSrc || '/__/user.svg'} alt="avatar" class='avatar' slot="button" class:invert-dark={avatarSrc === undefined} title="User Controls"
+  <img src={avatarSrc || '/__/user.svg'} alt="avatar" class='avatar' slot="button" class:invert-dark={!avatarSrc} title="User Controls"
   style={showUserMenu ? "opacity: 100%" : ""} on:click={() => {showUserMenu = !showUserMenu;}} on:keydown={() => {}}/>
   <div slot='content' >
     <a href='/{userId}' class='item'>User node</a>
@@ -88,6 +88,7 @@
     color: var(--tertiary);
     text-decoration: underline;
   }
+  .invert-dark {}
   .request {
     flex-grow: 100;
     margin: 0px;

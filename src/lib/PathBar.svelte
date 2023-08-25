@@ -46,8 +46,8 @@
       </a>
       <div slot='content'>
         {#if nodes}
-          {#each Object.entries(nodes) as [name, path]}
-            <a class='item' href={path}>{name}</a>
+          {#each Object.entries(nodes).sort() as [name, path]}
+            <a class='item' class:this-path={'/'+step == name} href={path}>{name}</a>
           {/each}
         {:else}
           <p class='item'>...</p>
@@ -79,7 +79,9 @@
         {/each}
 
         {#if !readOnly && !isPlaceholder}
-          <NamePrompt on:submit={(v) => {editing = false; router.redirect(path+'/'+v.detail); console.log(v)}} on:cancel={() => {editing = false}} bind:editing={editing} placeholder="new child node's path">
+          <NamePrompt on:submit={(v) => {editing = false; router.redirect(path+'/'+v.detail); console.log(v)}} on:cancel={() => {editing = false}} bind:editing={editing} 
+            placeholder="new child node's path" regexTest={/[A-z0-9_\- .]+/}>
+
             <button style='flex-grow: 1;' on:click={() => {editing = true}}>New Node</button>
           </NamePrompt>
         {/if}
@@ -118,6 +120,9 @@
     /* padding: 7px 1px; */
     height: 45px;
     padding: 1px;
+  }
+  .this-path {
+    font-weight: 700;
   }
   .arrow {
     font-size: 11px;
