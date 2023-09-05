@@ -2,10 +2,13 @@
   import { onDestroy, onMount } from 'svelte';
   import * as TK from 'telekinesis-js';
 
-  export let params;
-  export let srcdoc;
+  export let params = undefined;
+  export let srcDoc = undefined;
+  export let srcUrl = undefined;
+  export let linkOpener = undefined;
+  export let parentOrigin = undefined;
 
-  let iframe, messageHandler, updateParams, lastSrcdoc, sameIframe, height = 10;
+  let iframe, messageHandler, updateParams, lastSrcDoc, lastSrcUrl, src, sameIframe, height = 10;
   // const TK = globalThis.TK;
 
   const session = new TK.Session();
@@ -13,10 +16,16 @@
 
   $: {
     // console.log(updateParams, params, session.sessionKey.publicSerial())
-    if (srcdoc != lastSrcdoc) {
+    if (srcDoc != lastSrcDoc || srcUrl != lastSrcUrl) {
       sameIframe = false;
-      lastSrcdoc = srcdoc;
+      lastSrcDoc = srcDoc;
+      lastSrcUrl = srcUrl;
       updateParams = undefined;
+      if (srcUrl) {
+        src = {src: srcUrl};
+      } else {
+        src = {srcdoc: srcDoc};
+      }
     }
     if (updateParams) {
       updateParams(params).then(() => null);
@@ -31,24 +40,30 @@
     
     async _call(m) {
       // console.log(sameIframe, m?.source == iframe.contentWindow, connection.websocket)
-      if (m?.source == iframe.contentWindow) {
-        if (connection.websocket == undefined || !sameIframe) {
-          // console.log('updating connection')
-          sameIframe = true;
-          // @ts-ignore
-          connection.websocket = {
-            readyState: 1,
-            send: async x => {
-              m?.source?.postMessage(x, '*')
-            },
-          }
-          // console.log('should update params')
+      if (m?.source == iframe?.contentWindow) {
+        if (m.data.type === 'tkMessage') {
+          if (connection.websocket == undefined || !sameIframe) {
+            // console.log('updating connection')
+            sameIframe = true;
+            // @ts-ignore
+            connection.websocket = {
+              readyState: 1,
+              send: async x => {
+                m?.source?.postMessage({type: 'tkMessage', content: x}, parentOrigin || '*')
+              },
+            }
+            // console.log('should update params')
           
-          updateParams = await new TK.Telekinesis(TK.Route.fromObject(JSON.parse(String.fromCharCode.apply(null, m.data))), session)//.then(async x => {
-          // await updateParams(params)
-        } else {
-          // @ts-ignore
-          connection.recv({data: new Blob([m.data.buffer])})
+            updateParams = await new TK.Telekinesis(TK.Route.fromObject(
+              JSON.parse(String.fromCharCode.apply(null, m.data.content))
+            ), session)//.then(async x => {
+            // await updateParams(params)
+          } else {
+            // @ts-ignore
+            connection.recv({data: new Blob([m.data.content.buffer])})
+          }
+        } else if (m.data.type === 'popup') {
+          (linkOpener || window.open)(m.data.content)
         }
       }
       if (this.prevOnMessage) {
@@ -62,6 +77,7 @@
 
     // @ts-ignore
     window.onmessage = messageHandler;
+    
 
   })
   onDestroy(() => {
@@ -74,9 +90,9 @@
   })
 </script>
 
-{#if srcdoc}
+{#if srcDoc || srcUrl}
   <main bind:clientHeight={height}>
-    <iframe sandbox="allow-scripts allow-popups" srcdoc={srcdoc} bind:this={iframe} title="test" height={height-5} width="100%"/>
+    <iframe sandbox="allow-scripts allow-popups" {...src} bind:this={iframe} title="test" height={height-5} width="100%"/>
   </main>
 {/if}
 

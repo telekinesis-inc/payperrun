@@ -13,7 +13,7 @@
   import ServicesList from './lib/ServicesList.svelte';
   
 
-  let path, srcDoc, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
+  let path, srcDoc, srcUrl, sessionKey, user, node, entrypoint, userId, displayState, avatarSrc, shareable, isReadOnly, childrenNodes, displayOptions, display, 
     authenticating, displayServices, displayWidth, pathOpen, showDisplayMenu, displayParams, isPlaceholder, batteryStatus, displayAttribute;
   
   let pathBarHeight, displayMenuHeight, userMenuHeight;
@@ -60,7 +60,10 @@
 
           try {
             if (display && display.includes('/')) {
-              srcDoc = await user.get('/>/market')().get(display)._call([], displayParamsStr && JSON.parse(displayParamsStr));
+              let {src_doc, src_url, params} = await user.get('/>/market')().get(display)._call([], displayParamsStr && JSON.parse(displayParamsStr));
+              srcDoc = src_doc;
+              srcUrl = src_url;
+              displayParams = {...(params || {}), ...(displayParamsStr && JSON.parse(displayParamsStr))};
               displayState = DSTATES.ready;
             }
           } catch (e) {
@@ -69,32 +72,35 @@
             searchParams.delete('displayParams')
             // router.replace('?'+Array.from(searchParams.entries()).map(([k, v]) => k+'='+v).join('&'));
           }
-          displayAttribute = await node.get_attribute('display');
           if (displayState == DSTATES.ready) {
+            displayAttribute = await node.get_attribute('display');
             if (await displayAttribute.is_placeholder) {
               displayOptions = [];
             } else {
               displayOptions = [... await displayAttribute.list_attributes()];
             }
           } else {
-            if (await displayAttribute.is_placeholder) {
-              displayState = DSTATES.noDisplay;
-              showDisplayMenu = true;
-              displayOptions = [];
-            } else {
-              try {
-
-                // console.log(displayParams, displayParamsStr && JSON.stringify(displayParamsStr));
-                [srcDoc, displayParams] = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
-                displayParams = {...(displayParams || {}), ...(displayParamsStr && JSON.parse(displayParamsStr))};
-                // console.log(displayParams)
-                displayState = DSTATES.ready;
-              } catch(e) {
+            try {
+              // console.log(displayParams, displayParamsStr && JSON.stringify(displayParamsStr));
+              let {src_doc, src_url, params} = await node.display(display, displayParamsStr && JSON.parse(displayParamsStr));
+              srcDoc = src_doc;
+              srcUrl = src_url;
+              displayParams = {...(params || {}), ...(displayParamsStr && JSON.parse(displayParamsStr))};
+              // console.log(displayParams)
+              displayState = DSTATES.ready;
+              displayAttribute = await node.get_attribute('display');
+            } catch(e) {
+              displayAttribute = await node.get_attribute('display');
+              if (await displayAttribute.is_placeholder) {
+                displayState = DSTATES.noDisplay;
+                showDisplayMenu = true;
+                displayOptions = [];
+              } else {
                 displayState = DSTATES.error;
                 console.log(e)
               }
-              displayOptions = [... await displayAttribute.list_attributes()];
             }
+            displayOptions = [... await displayAttribute.list_attributes()];
           }
           // console.log('displayParamsStr', displayParamsStr)
         } catch (e) {
@@ -217,17 +223,21 @@
         console.log('save', detail)
         if (await user.get(path).is_placeholder) {
           await node.set(null);
-          isPlaceholder = false;
         } 
+        node = await user.get(path)
+        isPlaceholder = false;
         console.log('save2', isPlaceholder)
         if (await node.get_attribute('display').is_placeholder) {
           await node.get_attribute('display').set(null);
         }
-        console.log('save3', isPlaceholder)
-        await node.get_attribute('display').get_attribute(detail || null).set({
-          'pipeline': [['node', ['get', 'get'], ['call', [['/>/market'], {}]], ['call', [[], {}]], ['get', 'get'], ['call', [[display], {}]], ['call', [[], {}]]]]
-        }).get_attribute('params').set(displayParams);
-        console.log('save4', display)
+        let src;
+        if (srcUrl) {
+          src = {'src_url': srcUrl};
+        } else {
+          src = {'src_doc': srcDoc};
+        }
+        await node.get_attribute('display').get_attribute(detail || null).set(src).get_attribute('params').set(displayParams);
+        // console.log('save4', display)
         display = detail || null;
         window.history.pushState({},'',  window.location.pathname + (detail ? '?display='+detail : ''));
       }}
@@ -265,7 +275,9 @@
     {/if}
   </Modal>
   {#if displayState == DSTATES.ready}
-    <Sandboxed srcdoc={srcDoc} params={{
+    <Sandboxed srcDoc={srcDoc} srcUrl={srcUrl} linkOpener={url => {
+      Object.assign(document.createElement('a'), { target: '_blank', rel: 'noopener noreferrer', href: url, }).click();
+    }} params={{
       request: {
         node: requestNode,
         redirect: (url, newWindow=false) => {

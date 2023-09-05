@@ -27,7 +27,7 @@
       on:expanded={({detail}) => dispatch('expanded', detail)}
       contentStyle="border-radius: 5px; box-shadow: 0px 0px 5px #7773; background-color: var(--background); width: 300px;"
     >
-      <a href={'/'+path.split('/').slice(1, 1+i).join('/')+'/'+step} slot="button" class='path-btn' class:first-btn={i==0} 
+      <a href={'/'+path.split('/').slice(1, 2+i).join('/')} slot="button" class='path-btn' class:first-btn={i==0} 
       class:placeholder={isPlaceholder && i == nSteps - 1}
       title={isPlaceholder && (i == (nSteps-1)) ? "Placeholder (Node not stored yet)" : undefined}
         on:click={async (e) => {
@@ -46,7 +46,7 @@
       </a>
       <div slot='content'>
         {#if nodes}
-          {#each Object.entries(nodes).sort() as [name, path]}
+          {#each Object.entries(nodes) as [name, path]}
             <a class='item' class:this-path={'/'+step == name} href={path}>{name}</a>
           {/each}
         {:else}
